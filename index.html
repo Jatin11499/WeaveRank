@@ -1,0 +1,2334 @@
+<title>WeaveRank</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a practice-judge layout. Top bar with nav and score, problem list with filters,
+   then a two-column problem view (statement and data left, editor and helpers right). */
+:root{
+  --bg:#F3F7F2; --surface:#FFFFFF; --surface-2:#EAF0E9; --ink:#122018; --muted:#55655C; --line:#D5DFD6;
+  --accent:#0B8A43; --accent-ink:#FFFFFF; --accent-soft:#DAF0E2; --accent-text:#07652F;
+  --easy:#0B7A3B; --easy-bg:#DAF0E2; --medium:#8A5606; --medium-bg:#F7E8C8; --hard:#B3322C; --hard-bg:#F7DAD7;
+  --code-bg:#0F1B14; --code-fg:#DDEBE2; --code-line:#25382C; --code-mut:#8FA597;
+  --tok-str:#8FDDAE; --tok-num:#F3C873; --tok-kw:#86B9FF; --tok-com:#7C9686; --tok-hdr:#C9A2FF;
+  --bronze:#C58A4B; --silver:#A9B6BE; --gold:#E3B341; --locked:#CBD5CD; --locked-in:#E4EBE5;
+  --shadow:0 1px 2px rgba(18,32,24,.06),0 6px 18px rgba(18,32,24,.05);
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B120E; --surface:#111C16; --surface-2:#18261E; --ink:#E4EFE7; --muted:#9AAC9F; --line:#233329;
+    --accent:#2FC46C; --accent-ink:#06140C; --accent-soft:#143222; --accent-text:#6FE0A0;
+    --easy:#4FD58A; --easy-bg:#14301F; --medium:#E6B04A; --medium-bg:#352A12; --hard:#F28680; --hard-bg:#3A1A18;
+    --code-bg:#070D0A; --code-fg:#DDEBE2; --code-line:#1D2E24; --code-mut:#7F9788;
+    --locked:#2A3A31; --locked-in:#1A271F;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B120E; --surface:#111C16; --surface-2:#18261E; --ink:#E4EFE7; --muted:#9AAC9F; --line:#233329;
+  --accent:#2FC46C; --accent-ink:#06140C; --accent-soft:#143222; --accent-text:#6FE0A0;
+  --easy:#4FD58A; --easy-bg:#14301F; --medium:#E6B04A; --medium-bg:#352A12; --hard:#F28680; --hard-bg:#3A1A18;
+  --code-bg:#070D0A; --code-fg:#DDEBE2; --code-line:#1D2E24; --code-mut:#7F9788;
+  --locked:#2A3A31; --locked-in:#1A271F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font:15px/1.55 var(--font-body);
+  padding-block:0 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+a{color:inherit}
+code,pre,textarea{font-family:var(--font-mono)}
+h1,h2,h3{font-family:var(--font-display);letter-spacing:-.015em;line-height:1.15;margin:0;text-wrap:balance}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.top{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;padding-block:18px}
+.brand{display:flex;align-items:center;gap:10px;font:700 22px/1 var(--font-display);letter-spacing:-.02em;text-decoration:none}
+.nav{display:flex;gap:4px}
+.nav a{padding:8px 14px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--surface-2)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent-text)}
+.stats{margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stat{display:inline-flex;gap:6px;align-items:baseline;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13px;color:var(--muted)}
+.stat b{color:var(--ink);font-family:var(--font-mono);font-weight:500;font-variant-numeric:tabular-nums}
+main{max-width:1180px;margin:0 auto}
+.foot{max-width:1180px;margin:40px auto 0;color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between}
+
+/* chips and buttons */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.lv-easy{background:var(--easy-bg);color:var(--easy)}
+.lv-medium{background:var(--medium-bg);color:var(--medium)}
+.lv-hard{background:var(--hard-bg);color:var(--hard)}
+.chip.topic{background:var(--surface-2);color:var(--muted);font-weight:500}
+.st-done{background:var(--accent-soft);color:var(--accent-text)}
+.st-todo{background:var(--surface-2);color:var(--muted)}
+.btn{font:500 14px/1 var(--font-body);padding:11px 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover:not(:disabled){filter:brightness(1.06)}
+.btn.ghost{background:transparent}
+.mini{font:500 12px/1 var(--font-body);padding:6px 10px;border-radius:6px;border:1px solid var(--code-line);background:transparent;color:var(--code-fg);cursor:pointer}
+.mini:hover{background:var(--code-line)}
+
+/* list view */
+.intro{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:end;padding-block:12px 22px}
+.intro h1{font-size:clamp(28px,5vw,42px)}
+.intro p{color:var(--muted);margin:10px 0 0;max-width:52ch}
+.meters{display:grid;gap:10px}
+.meter{display:grid;grid-template-columns:64px minmax(0,1fr) 56px;gap:12px;align-items:center;font-size:13px}
+.meter .bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.meter .bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.meter.m-easy .bar i{background:var(--easy)} .meter.m-medium .bar i{background:var(--medium)} .meter.m-hard .bar i{background:var(--hard)}
+.meter .n{font-family:var(--font-mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.meter span:first-child{background:none;color:var(--ink);font-weight:500;padding:0}
+.next-rank{font-size:13px;color:var(--muted);margin-top:2px}
+
+.filters{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.fgroup{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.fgroup>label,.fgroup>.fl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font:500 13px/1 var(--font-body);padding:8px 12px;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.seg button small{font-family:var(--font-mono);margin-left:5px;opacity:.7}
+.field{font:14px var(--font-body);padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0}
+.fsearch{flex:1 1 200px}
+.count{margin:16px 2px 10px;color:var(--muted);font-size:13px}
+.rows{display:grid;gap:8px}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;gap:6px 16px;align-items:center;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;text-decoration:none}
+.row:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.r-state{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:var(--accent-ink)}
+.r-state.is-done{background:var(--accent);border-color:var(--accent)}
+.r-title{display:block;font-weight:600}
+.r-sub{display:block;color:var(--muted);font-size:13px}
+.r-go{font-size:13px;font-weight:600;color:var(--accent-text);min-width:52px;text-align:right}
+.empty{padding:36px 20px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:12px}
+
+/* problem view */
+.back{display:inline-block;margin:6px 0 14px;color:var(--muted);text-decoration:none;font-size:14px}
+.back:hover{color:var(--ink)}
+.p-head h1{font-size:clamp(26px,4.5vw,38px)}
+.p-meta{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 20px;align-items:center}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.col{display:grid;gap:14px;min-width:0}
+.col-r{position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;min-width:0}
+.prose{padding:18px 20px}
+.prose p{margin:0 0 10px}.prose p:last-child{margin:0}
+.prose code,.why code,.hints code{background:var(--surface-2);padding:1px 6px;border-radius:5px;font-size:.9em}
+.data{overflow:hidden;background:var(--code-bg);border-color:var(--code-line)}
+.data-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px 9px 16px;border-bottom:1px solid var(--code-line);color:var(--code-mut);font-size:12px}
+.data-l{display:flex;flex-wrap:wrap;gap:4px 10px;min-width:0}
+.data-l b{color:var(--code-fg);font-family:var(--font-mono);font-weight:500}
+.data-l i{font-style:normal}
+pre.code{margin:0;padding:14px 16px;overflow-x:auto;color:var(--code-fg);font-size:13px;line-height:1.6;tab-size:2}
+pre.code code{font-family:inherit}
+.t-c{color:var(--tok-com)}.t-s{color:var(--tok-str)}.t-n{color:var(--tok-num)}.t-k{color:var(--tok-kw)}.t-h{color:var(--tok-hdr)}
+.editor{overflow:hidden;background:var(--code-bg);border-color:var(--code-line)}
+.editor textarea{display:block;width:100%;min-height:270px;resize:vertical;border:0;background:var(--code-bg);color:var(--code-fg);font-size:13.5px;line-height:1.6;padding:14px 16px;tab-size:2;white-space:pre;overflow:auto}
+.editor textarea:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--accent)}
+.editor-note{padding:9px 16px;border-top:1px solid var(--code-line);color:var(--code-mut);font-size:12px}
+.editor-note a{color:var(--tok-str)}
+.check{background:var(--surface);border-top:1px solid var(--line);padding:14px 16px;display:grid;gap:10px}
+.check-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.check label{font-weight:600;font-size:14px}.check-tip{font-size:12px;color:var(--muted);line-height:1.4}
+.check textarea{display:block;width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font-size:14px;line-height:1.55;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow-x:hidden;overflow-y:auto;tab-size:2;user-select:text;-webkit-user-select:text;touch-action:pan-y}
+.check-row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.bonus{font-size:13px;color:var(--accent-text);font-weight:600;flex:1 1 200px;min-width:0}
+.bonus.off{color:var(--muted);font-weight:400}
+.verdict .verdict{margin:0}
+.verdict{border-radius:10px;padding:12px 14px;font-size:14px}
+.verdict.ok{background:var(--accent-soft);color:var(--accent-text)}
+.verdict.bad{background:var(--hard-bg);color:var(--ink)}
+.verdict ul{margin:6px 0 0;padding-left:18px;font-family:var(--font-mono);font-size:12.5px;overflow-wrap:anywhere}
+#verdict:empty{display:none}
+#verdict .verdict{display:block}
+#dyn{background:var(--surface);border-top:1px solid var(--line);padding:14px 16px;display:grid;gap:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.confirm{padding:12px 14px;border-radius:10px;background:var(--medium-bg);color:var(--ink);display:grid;gap:10px;font-size:14px}
+.confirm div{display:flex;gap:8px;flex-wrap:wrap}
+.hints{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.hints li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:14px}
+.hints li b{font-family:var(--font-mono);font-weight:500;color:var(--accent-text)}
+.answer{border-radius:10px;overflow:hidden;background:var(--code-bg);border:1px solid var(--code-line)}
+.why{padding:12px 16px;background:var(--surface-2);font-size:14px}
+.why p{margin:0 0 6px}.why p:last-child{margin:0}
+.note{font-size:13px;color:var(--muted)}
+.p-nav{display:flex;justify-content:space-between;gap:12px;margin-top:22px;flex-wrap:wrap}
+.p-nav a{text-decoration:none}
+
+
+/* profile */
+.profile-wrap{max-width:900px;margin:24px auto}
+.profile-hero{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.profile-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.profile-form input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:12px 13px;background:var(--surface-2);color:var(--ink);font:inherit}
+.profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.profile-stat{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.profile-stat b{display:block;font:700 23px var(--font-display)}
+.profile-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
+.profile-badge{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.profile-badge .hexb{width:48px;height:52px;flex:0 0 48px}
+.profile-badge strong{font-size:13px;line-height:1.3}
+.profile-note{color:var(--muted);font-size:13px;margin-top:10px}
+@media(max-width:600px){.profile-hero{grid-template-columns:1fr;padding:16px}.profile-stats{gap:7px}.profile-stat{padding:10px}.profile-stat b{font-size:19px}.profile-badges{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* badges */
+.section-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px;margin:6px 0 16px}
+.section-h h2{font-size:24px}
+.section-h p{margin:0;color:var(--muted);font-size:14px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:34px}
+.bcard{display:grid;justify-items:center;gap:6px;text-align:center;padding:16px 10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.bcard h3{font-size:15px;font-family:var(--font-body);font-weight:600;letter-spacing:0}
+.bcard p{margin:0;font-size:12.5px;color:var(--muted)}
+.bcard .prog{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bcard.locked h3{color:var(--muted)}
+.hexb{width:92px;height:auto}
+.hexb .hx{fill:var(--locked)}
+.hexb .hx2{fill:var(--locked-in)}
+.hexb .hx-t{fill:var(--muted);font:500 15px var(--font-mono)}
+.hexb .star{fill:var(--locked)}
+.hexb.t1 .hx{fill:var(--bronze)}.hexb.t2 .hx{fill:var(--silver)}.hexb.t3 .hx{fill:var(--gold)}
+.hexb.t1 .hx2,.hexb.t2 .hx2,.hexb.t3 .hx2{fill:var(--surface)}
+.hexb.t1 .hx-t,.hexb.t2 .hx-t,.hexb.t3 .hx-t{fill:var(--ink)}
+.hexb.t1 .star.on{fill:var(--bronze)}.hexb.t2 .star.on{fill:var(--silver)}.hexb.t3 .star.on{fill:var(--gold)}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translate(-50%,24px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:10px;font-size:14px;max-width:calc(100vw - 32px);transition:opacity .2s,transform .2s;z-index:20}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+
+@media (max-width:900px){
+  .split{grid-template-columns:minmax(0,1fr)}
+  .col-r{position:static}
+  .intro{grid-template-columns:minmax(0,1fr);align-items:start}
+}
+@media (max-width:560px){
+  .stats{margin-left:0;width:100%}
+  .row{grid-template-columns:28px minmax(0,1fr) auto}
+  .r-go{display:none}
+  .meter{grid-template-columns:58px minmax(0,1fr) 50px}
+}
+
+
+/* Mobile-first refinements */
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; scroll-padding-top:12px }
+body{margin:0; min-width:320px; overflow-x:hidden}
+button,a,select{ -webkit-tap-highlight-color:transparent }
+button,.btn,.seg button{touch-action:manipulation}
+img,svg,pre{max-width:100%}
+main,.top,.foot{width:100%; min-width:0}
+.top{row-gap:12px}
+.nav{flex-wrap:wrap;min-width:0}
+.stats{min-width:0}
+.intro>* ,.split>* ,.col>*{min-width:0}
+.field{max-width:100%}
+pre.code,.editor textarea,.check textarea{overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch}
+
+@media (max-width:700px){
+  body{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+  .top{padding-block:12px;gap:10px}
+  .brand{font-size:21px}
+  .nav{width:100%;gap:4px;order:2}
+  .nav a{padding:9px 11px;font-size:14px}
+  .stats{order:3;width:100%;margin:0;gap:6px}
+  .stat{padding:6px 9px;font-size:12px}
+  .intro{gap:16px;padding-block:10px 18px}
+  .intro h1{font-size:clamp(27px,8vw,36px)}
+  .filters{padding:12px;gap:12px;border-radius:10px}
+  .fgroup{width:100%;gap:7px}
+  .fgroup>.fl,.fgroup>label{width:100%}
+  .seg{max-width:100%;width:100%;display:flex}
+  .seg button{flex:1 1 auto;min-height:38px;padding:9px 7px;font-size:12px;white-space:nowrap}
+  .field{width:100%;min-height:42px}
+  .fsearch{flex:1 1 100%}
+  .row{grid-template-columns:26px minmax(0,1fr);gap:5px 10px;padding:12px;border-radius:10px}
+  .row .chip{justify-self:start}
+  .r-title{font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+  .r-sub{font-size:12px;overflow-wrap:anywhere}
+  .r-go{display:none}
+  .p-head h1{font-size:clamp(25px,7vw,34px);overflow-wrap:anywhere}
+  .p-meta{margin:10px 0 16px;gap:6px}
+  .split{gap:14px}
+  .col{gap:12px}
+  .prose{padding:14px}
+  .data-h{padding:9px 11px}
+  pre.code{padding:12px;font-size:12px;line-height:1.55}
+  .editor textarea{min-height:220px;padding:12px;font-size:12px;line-height:1.55}
+  .check{padding:12px;gap:9px}
+  .check textarea{min-height:160px;padding:12px;font-size:16px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;overflow-x:hidden}
+  .check-row{gap:8px}
+  .check-row .btn,.actions .btn,.confirm .btn{min-height:42px}
+  .bonus{flex-basis:100%}
+  #dyn{padding:12px;gap:10px}
+  .actions{gap:8px}
+  .actions .btn{flex:1 1 auto}
+  .hints li{padding:9px 10px;gap:8px;font-size:13px}
+  .p-nav{gap:8px;margin-top:16px}
+  .p-nav a{flex:1 1 130px;min-height:42px;display:flex;align-items:center}
+  .bgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .bcard{padding:12px 8px}
+  .hexb{width:78px}
+  .section-h h2{font-size:22px}
+  .foot{margin-top:28px;font-size:12px;gap:5px}
+}
+@media (max-width:380px){
+  .stat{font-size:11px;padding:5px 7px}
+  .nav a{padding:8px 9px;font-size:13px}
+  .meter{grid-template-columns:50px minmax(0,1fr) 42px;gap:8px;font-size:12px}
+  .seg button{font-size:11px;padding-inline:5px}
+  .bgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .btn{padding:10px 11px;font-size:13px}
+}
+.data-tools{max-width:1180px;margin:10px auto 28px;padding:0 24px;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.data-tools #save-status{margin-right:auto}
+@media(max-width:640px){.data-tools{padding:0 14px;justify-content:flex-start}.data-tools #save-status{width:100%;margin:0 0 3px}}
+@media (hover:none){
+  .row:hover{box-shadow:none}
+  .btn:hover:not(:disabled){border-color:var(--line)}
+}
+
+
+/* AI custom practice */
+.custom-wrap{display:grid;gap:18px;max-width:1000px;margin:8px auto 28px}
+.custom-hero{padding:22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.custom-hero p{color:var(--muted);margin:8px 0 0;max-width:70ch}
+.custom-form{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px auto;gap:10px;align-items:end;margin-top:18px}
+.custom-field{display:grid;gap:6px;min-width:0}.custom-field label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.custom-field input,.custom-field select{width:100%;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink);font:14px var(--font-body)}
+.custom-hint{font-size:12px;color:var(--muted);margin-top:10px}
+.custom-list{display:grid;gap:8px}.custom-item{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:11px}
+.custom-item-main{min-width:0;flex:1;text-decoration:none}.custom-item-main strong{display:block}.custom-item-main small{display:block;color:var(--muted)}
+.custom-item .mini{color:var(--muted);border-color:var(--line)}
+.custom-loading{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+@media(max-width:760px){.custom-form{grid-template-columns:1fr 1fr}.custom-form .custom-field:first-child{grid-column:1/-1}.custom-form button{grid-column:1/-1;width:100%}}
+@media(max-width:420px){.custom-form{grid-template-columns:1fr}.custom-form .custom-field:first-child,.custom-form button{grid-column:auto}.custom-hero{padding:16px}.custom-item{align-items:flex-start}}
+
+</style>
+
+<header class="top">
+  <a class="brand" href="#problems" aria-label="WeaveRank home">
+    <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="var(--accent)"/><path d="M7 9.5h14M7 14h14M7 18.5h14" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round"/><path d="M10.5 6.5v15M17.5 6.5v15" stroke="var(--accent-ink)" stroke-width="2" stroke-linecap="round" opacity=".5"/></svg>
+    WeaveRank
+  </a>
+  <nav class="nav" aria-label="Sections">
+    <a href="#problems" id="nav-problems">Problems</a>
+    <a href="#custom" id="nav-custom">Custom Practice</a>
+    <a href="#badges" id="nav-badges">Badges</a>
+    <a href="#profile" id="nav-profile">Profile</a>
+    <a href="https://dataweave.mulesoft.com/learn/playground" target="_blank" rel="noopener noreferrer">Playground &#8599;</a>
+  </nav>
+  <div class="stats" id="stats" aria-live="polite"></div>
+</header>
+<main id="app"></main>
+<div class="foot"><span>Questions follow the DataWeave 2.x language and core library reference.</span><span id="sync"></span></div>
+<div class="data-tools" aria-label="Progress backup tools">
+  <span id="save-status" role="status">Auto-save is on for this browser.</span>
+  <button type="button" class="mini" id="backup-export">Export backup</button>
+  <button type="button" class="mini" id="backup-import">Restore backup</button>
+  <input type="file" id="backup-file" accept="application/json,.json" hidden>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+const r = String.raw;
+const J = "application/json";
+const PRODUCTS = r`[
+  { "name": "Laptop", "price": 1200 },
+  { "name": "Mouse", "price": 25 },
+  { "name": "Desk", "price": 300 }
+]`;
+
+const TOPICS = [
+  { name: "Strings", ico: "Aa" },
+  { name: "Selectors", ico: ".a" },
+  { name: "Map & Filter", ico: "map" },
+  { name: "Objects", ico: "{ }" },
+  { name: "Grouping", ico: "grp" },
+  { name: "Aggregation", ico: "Σ" },
+  { name: "Conditionals", ico: "?:" },
+  { name: "Dates", ico: "dt" },
+  { name: "Functions", ico: "fn" },
+  { name: "Modules", ico: "::" },
+  { name: "Formats", ico: "csv" }
+];
+
+const Q = [
+/* ---------------- EASY ---------------- */
+{ id: "full-name", title: "Full name", topic: "Strings", level: "easy",
+  desc: r`Combine {{firstName}} and {{lastName}} into one {{fullName}} field, separated by a single space.`,
+  ins: [["payload", J, r`{
+  "firstName": "Ada",
+  "lastName": "Lovelace"
+}`]],
+  out: [J, r`{
+  "fullName": "Ada Lovelace"
+}`],
+  hints: [r`The {{++}} operator joins two strings.`, r`String interpolation also works: {{"$(a) $(b)"}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  fullName: payload.firstName ++ " " ++ payload.lastName
+}`,
+  why: r`{{++}} concatenates strings. Interpolation, {{"$(payload.firstName) $(payload.lastName)"}}, gives the same result.` },
+
+{ id: "pick-fields", title: "Pick nested fields", topic: "Selectors", level: "easy",
+  desc: r`Read the order id and the customer's city out of the nested input and return them as a flat object.`,
+  ins: [["payload", J, r`{
+  "order": {
+    "id": "A-1001",
+    "customer": { "name": "Priya", "city": "Pune" }
+  }
+}`]],
+  out: [J, r`{
+  "orderId": "A-1001",
+  "city": "Pune"
+}`],
+  hints: [r`Chain dot selectors to walk into nested objects: {{payload.order.id}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  orderId: payload.order.id,
+  city: payload.order.customer.city
+}`,
+  why: r`The dot selector reads one key at a time, so you can chain as deep as you need.` },
+
+{ id: "index-range", title: "First, last and middle", topic: "Selectors", level: "easy",
+  desc: r`From the array of colors, return the first item, the last item, and the two items in the middle.`,
+  ins: [["payload", J, r`["red", "green", "blue", "yellow"]`]],
+  out: [J, r`{
+  "first": "red",
+  "last": "yellow",
+  "middle": ["green", "blue"]
+}`],
+  hints: [r`Indexes start at 0, and negative indexes count from the end.`, r`A range selector looks like {{payload[1 to 2]}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  first: payload[0],
+  last: payload[-1],
+  middle: payload[1 to 2]
+}`,
+  why: r`{{payload[-1]}} is the last item. A range selector returns a sub-array, and both ends are included.` },
+
+{ id: "double", title: "Double the numbers", topic: "Map & Filter", level: "easy",
+  desc: r`Return a new array where every number is doubled.`,
+  ins: [["payload", J, r`[1, 2, 3, 4]`]],
+  out: [J, r`[2, 4, 6, 8]`],
+  hints: [r`{{map}} runs an expression on every item. {{$}} is the current item.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ($ * 2)`,
+  why: r`{{map}} always returns an array with one result per input item.` },
+
+{ id: "evens", title: "Keep the evens", topic: "Map & Filter", level: "easy",
+  desc: r`Return only the even numbers.`,
+  ins: [["payload", J, r`[1, 2, 3, 4, 5, 6]`]],
+  out: [J, r`[2, 4, 6]`],
+  hints: [r`{{filter}} keeps the items for which the expression is true.`, r`The remainder of a division is {{mod}}: {{$ mod 2}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload filter (($ mod 2) == 0)`,
+  why: r`A number is even when {{$ mod 2}} is 0. Wrapping that part in parentheses keeps the precedence obvious.` },
+
+{ id: "product-names", title: "Product names", topic: "Map & Filter", level: "easy",
+  desc: r`Return just the names of the products as an array of strings.`,
+  ins: [["payload", J, PRODUCTS]],
+  out: [J, r`["Laptop", "Mouse", "Desk"]`],
+  hints: [r`Map each product to its {{name}}.`, r`On an array of objects, {{payload.name}} also collects the names.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map $.name`,
+  why: r`{{payload.name}} is a shorter equivalent: a selector applied to an array returns the matching value from every item.` },
+
+{ id: "sum", title: "Add them up", topic: "Aggregation", level: "easy",
+  desc: r`Return the sum of all the numbers.`,
+  ins: [["payload", J, r`[10, 20, 30, 5]`]],
+  out: [J, r`65`],
+  hints: [r`The core library has a function that adds up an array of numbers.`],
+  sol: r`%dw 2.0
+output application/json
+---
+sum(payload)`,
+  why: r`{{sum}} is built in. {{payload reduce ($$ + $)}} does the same thing by hand.` },
+
+{ id: "count-by", title: "How many are over 10?", topic: "Aggregation", level: "easy",
+  desc: r`Return how many numbers in the array are greater than 10.`,
+  ins: [["payload", J, r`[5, 12, 8, 20, 3, 15]`]],
+  out: [J, r`3`],
+  hints: [r`{{countBy}} counts the items for which a condition is true.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload countBy ($ > 10)`,
+  why: r`{{countBy}} takes a function that returns a boolean and counts the true results. {{sizeOf(payload filter ($ > 10))}} gives the same answer.` },
+
+{ id: "max-by", title: "Most expensive product", topic: "Aggregation", level: "easy",
+  desc: r`Return the whole product object that has the highest price.`,
+  ins: [["payload", J, PRODUCTS]],
+  out: [J, r`{
+  "name": "Laptop",
+  "price": 1200
+}`],
+  hints: [r`{{maxBy}} returns the item with the largest value of the expression you give it.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload maxBy $.price`,
+  why: r`{{maxBy}} returns the original item, not the number. {{minBy}} is the mirror image.` },
+
+{ id: "sort-price", title: "Cheapest first", topic: "Aggregation", level: "easy",
+  desc: r`Sort the products by price, lowest first.`,
+  ins: [["payload", J, PRODUCTS]],
+  out: [J, r`[
+  { "name": "Mouse", "price": 25 },
+  { "name": "Desk", "price": 300 },
+  { "name": "Laptop", "price": 1200 }
+]`],
+  hints: [r`Use {{orderBy}} with the field to sort on.`, r`For highest first, negate the value: {{-$.price}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload orderBy $.price`,
+  why: r`{{orderBy}} sorts ascending. Negating a numeric criterion sorts descending.` },
+
+{ id: "upper-values", title: "Shout the values", topic: "Objects", level: "easy",
+  desc: r`Return the same object with every value in upper case. Keys stay as they are.`,
+  ins: [["payload", J, r`{
+  "city": "pune",
+  "country": "india"
+}`]],
+  out: [J, r`{
+  "city": "PUNE",
+  "country": "INDIA"
+}`],
+  hints: [r`{{mapObject}} gives you the value and the key of every pair.`, r`The lambda must return an object. Use a dynamic key: {{{ (key): ... }}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload mapObject ((value, key) -> {
+  (key): upper(value)
+})`,
+  why: r`{{mapObject}} transforms every key-value pair and merges the returned objects. Parentheses around {{key}} make it a dynamic key.` },
+
+{ id: "remove-key", title: "Remove the password", topic: "Objects", level: "easy",
+  desc: r`Return the object without its {{password}} field.`,
+  ins: [["payload", J, r`{
+  "user": "ravi",
+  "password": "secret",
+  "role": "admin"
+}`]],
+  out: [J, r`{
+  "user": "ravi",
+  "role": "admin"
+}`],
+  hints: [r`The {{-}} operator removes a key from an object.`, r`{{filterObject}} would also work.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload - "password"`,
+  why: r`{{object - "key"}} returns a copy of the object without that key.` },
+
+{ id: "default", title: "Fallback country", topic: "Conditionals", level: "easy",
+  desc: r`Return the name, and a {{country}} field that falls back to {{"India"}} when the input has no country.`,
+  ins: [["payload", J, r`{
+  "name": "Ravi"
+}`]],
+  out: [J, r`{
+  "name": "Ravi",
+  "country": "India"
+}`],
+  hints: [r`A missing field evaluates to {{null}}.`, r`The {{default}} operator replaces {{null}} with a value.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  name: payload.name,
+  country: payload.country default "India"
+}`,
+  why: r`{{a default b}} returns {{b}} when {{a}} is {{null}} or the selector found nothing.` },
+
+{ id: "date-parts", title: "Pick apart a timestamp", topic: "Dates", level: "easy",
+  desc: r`Return the year, month, day and hour of the timestamp as numbers.`,
+  ins: [["payload", J, r`{
+  "ts": "2026-11-03T14:30:00Z"
+}`]],
+  out: [J, r`{
+  "year": 2026,
+  "month": 11,
+  "day": 3,
+  "hour": 14
+}`],
+  hints: [r`Coerce the string with {{as DateTime}} first.`, r`A DateTime has {{.year}}, {{.month}}, {{.day}} and {{.hour}} selectors.`],
+  sol: r`%dw 2.0
+output application/json
+var ts = payload.ts as DateTime
+---
+{
+  year: ts.year,
+  month: ts.month,
+  day: ts.day,
+  hour: ts.hour
+}`,
+  why: r`ISO 8601 strings coerce to {{DateTime}} without a format. Declaring a {{var}} in the header avoids repeating the coercion.` },
+
+{ id: "celsius", title: "Celsius to Fahrenheit", topic: "Functions", level: "easy",
+  desc: r`Convert every Celsius temperature to Fahrenheit using a function you declare in the header. The formula is {{c * 9 / 5 + 32}}.`,
+  ins: [["payload", J, r`[0, 37, 100]`]],
+  out: [J, r`[32, 98.6, 212]`],
+  hints: [r`Declare it above the {{---}} line: {{fun toF(c: Number) = ...}}.`],
+  sol: r`%dw 2.0
+output application/json
+fun toF(c: Number): Number = c * 9 / 5 + 32
+---
+payload map ((c) -> toF(c))`,
+  why: r`Functions declared in the header can be reused anywhere in the body. Type annotations are optional but catch mistakes early.` },
+
+{ id: "json-to-csv", title: "JSON to CSV", topic: "Formats", level: "easy",
+  desc: r`Write the array of objects as CSV. The keys of the first object become the header row.`,
+  ins: [["payload", J, r`[
+  { "id": 1, "name": "Asha" },
+  { "id": 2, "name": "Karan" }
+]`]],
+  out: ["application/csv", r`id,name
+1,Asha
+2,Karan`],
+  hints: [r`Only the output directive needs to change.`],
+  sol: r`%dw 2.0
+output application/csv
+---
+payload`,
+  why: r`An array of flat objects is already the shape the CSV writer expects, so the body can just return the payload.` },
+
+{ id: "starts-with", title: "Words starting with A", topic: "Strings", level: "easy",
+  desc: r`Keep only the words that start with the letter {{a}}.`,
+  ins: [["payload", J, r`["apple", "avocado", "banana", "apricot", "cherry"]`]],
+  out: [J, r`["apple", "avocado", "apricot"]`],
+  hints: [r`{{startsWith}} returns a boolean, so it fits straight into {{filter}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload filter ($ startsWith "a")`,
+  why: r`{{startsWith}}, {{endsWith}} and {{contains}} are all boolean string checks.` },
+
+/* ---------------- MEDIUM ---------------- */
+{ id: "descendants", title: "Every price in the store", topic: "Selectors", level: "medium",
+  desc: r`Collect every {{price}} in the document, however deeply it is nested, into one array.`,
+  ins: [["payload", J, r`{
+  "store": {
+    "book": [
+      { "title": "A", "price": 10 },
+      { "title": "B", "price": 20 }
+    ],
+    "bike": { "color": "red", "price": 100 }
+  }
+}`]],
+  out: [J, r`[10, 20, 100]`],
+  hints: [r`Two dots search every level of the structure.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload..price`,
+  why: r`The descendants selector {{..}} returns every match at any depth, in document order.` },
+
+{ id: "xml-books", title: "XML catalog to JSON", topic: "Formats", level: "medium",
+  desc: r`Turn the XML catalog into a JSON array. Each book needs its {{id}} attribute, its {{title}}, and its {{price}} as a number.`,
+  ins: [["payload", "application/xml", r`<catalog>
+  <book id="b1" lang="en">
+    <title>DataWeave in Action</title>
+    <price>29.99</price>
+  </book>
+  <book id="b2" lang="fr">
+    <title>Le Tissage</title>
+    <price>19.5</price>
+  </book>
+</catalog>`]],
+  out: [J, r`[
+  { "id": "b1", "title": "DataWeave in Action", "price": 29.99 },
+  { "id": "b2", "title": "Le Tissage", "price": 19.5 }
+]`],
+  hints: [r`{{payload.catalog.*book}} selects every {{book}} element as a list.`, r`Attributes are read with {{.@id}}. Element text arrives as a string, so coerce it with {{as Number}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload.catalog.*book map ((b) -> {
+  id: b.@id,
+  title: b.title,
+  price: b.price as Number
+})`,
+  why: r`In XML, repeated elements need the multi-value selector {{*}}. {{@}} reads attributes.` },
+
+{ id: "flat-map", title: "Everyone on one list", topic: "Map & Filter", level: "medium",
+  desc: r`Return a single flat array with the members of every department.`,
+  ins: [["payload", J, r`[
+  { "dept": "Eng", "members": ["Asha", "Ravi"] },
+  { "dept": "Ops", "members": ["Meera"] }
+]`]],
+  out: [J, r`["Asha", "Ravi", "Meera"]`],
+  hints: [r`{{map}} would give you an array of arrays.`, r`{{flatMap}} maps and flattens in one step.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload flatMap $.members`,
+  why: r`{{flatMap}} expects the mapping to return an array and joins the results. {{flatten(payload.members)}} is an equivalent.` },
+
+{ id: "order-total", title: "Order total", topic: "Aggregation", level: "medium",
+  desc: r`Return the order id and the total value of the order. Each line is worth {{qty * price}}.`,
+  ins: [["payload", J, r`{
+  "orderId": "A-7",
+  "lines": [
+    { "sku": "P1", "qty": 2, "price": 10.5 },
+    { "sku": "P2", "qty": 1, "price": 99.99 },
+    { "sku": "P3", "qty": 3, "price": 5 }
+  ]
+}`]],
+  out: [J, r`{
+  "orderId": "A-7",
+  "total": 135.99
+}`],
+  hints: [r`First turn every line into its own amount with {{map}}.`, r`Then add the amounts with {{sum}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  orderId: payload.orderId,
+  total: sum(payload.lines map ($.qty * $.price))
+}`,
+  why: r`DataWeave numbers are decimals, so 10.5 and 99.99 add exactly with no floating point drift.` },
+
+{ id: "pluck", title: "Object to rows", topic: "Objects", level: "medium",
+  desc: r`Turn the object of fruit counts into an array of objects with {{fruit}} and {{count}}.`,
+  ins: [["payload", J, r`{
+  "apples": 10,
+  "pears": 4,
+  "plums": 7
+}`]],
+  out: [J, r`[
+  { "fruit": "apples", "count": 10 },
+  { "fruit": "pears", "count": 4 },
+  { "fruit": "plums", "count": 7 }
+]`],
+  hints: [r`{{mapObject}} returns an object. You need an array, so use {{pluck}}.`, r`Keys are not strings yet. Convert with {{key as String}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload pluck ((value, key) -> {
+  fruit: key as String,
+  count: value
+})`,
+  why: r`{{pluck}} is the object-to-array counterpart of {{mapObject}}.` },
+
+{ id: "drop-nulls", title: "Drop the nulls", topic: "Objects", level: "medium",
+  desc: r`Return the object without the fields whose value is {{null}}.`,
+  ins: [["payload", J, r`{
+  "id": 7,
+  "name": "Ravi",
+  "tempToken": null,
+  "nickname": null,
+  "city": "Pune"
+}`]],
+  out: [J, r`{
+  "id": 7,
+  "name": "Ravi",
+  "city": "Pune"
+}`],
+  hints: [r`{{filterObject}} is {{filter}} for the pairs of an object.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload filterObject ((value) -> value != null)`,
+  why: r`The lambda for {{filterObject}} receives {{value}}, {{key}} and {{index}}. You only need the ones you use.` },
+
+{ id: "group-city", title: "People by city", topic: "Grouping", level: "medium",
+  desc: r`Group the people by city. The result is an object whose keys are cities and whose values are the list of names living there.`,
+  ins: [["payload", J, r`[
+  { "name": "Asha", "city": "Pune" },
+  { "name": "Karan", "city": "Mumbai" },
+  { "name": "Ravi", "city": "Pune" },
+  { "name": "Meera", "city": "Mumbai" },
+  { "name": "Zoya", "city": "Delhi" }
+]`]],
+  out: [J, r`{
+  "Pune": ["Asha", "Ravi"],
+  "Mumbai": ["Karan", "Meera"],
+  "Delhi": ["Zoya"]
+}`],
+  hints: [r`{{groupBy}} returns an object of city to whole person objects.`, r`Then use {{mapObject}} to keep only the names.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy $.city) mapObject ((people, city) -> {
+  (city): people.name
+})`,
+  why: r`{{groupBy}} followed by {{mapObject}} is the standard recipe for grouped summaries.` },
+
+{ id: "distinct", title: "Unique customers", topic: "Grouping", level: "medium",
+  desc: r`The list has duplicates by email. Keep the first entry for each email address.`,
+  ins: [["payload", J, r`[
+  { "email": "a@x.com", "name": "A" },
+  { "email": "b@x.com", "name": "B" },
+  { "email": "a@x.com", "name": "A2" }
+]`]],
+  out: [J, r`[
+  { "email": "a@x.com", "name": "A" },
+  { "email": "b@x.com", "name": "B" }
+]`],
+  hints: [r`{{distinctBy}} takes the expression that decides what counts as a duplicate.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload distinctBy $.email`,
+  why: r`{{distinctBy}} keeps the first item it meets for each distinct value of the expression.` },
+
+{ id: "match-types", title: "Name the type", topic: "Conditionals", level: "medium",
+  desc: r`For each item in the array, return the name of its type in lower case: number, string, boolean, null, array or object.`,
+  ins: [["payload", J, r`[42, "hello", true, null, [1, 2], { "a": 1 }]`]],
+  out: [J, r`["number", "string", "boolean", "null", "array", "object"]`],
+  hints: [r`{{match}} with {{case is Number -> ...}} tests the type of a value.`, r`Remember {{null}} has its own type, {{Null}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ((item) -> item match {
+  case is Number -> "number"
+  case is String -> "string"
+  case is Boolean -> "boolean"
+  case is Null -> "null"
+  case is Array -> "array"
+  case is Object -> "object"
+})`,
+  why: r`{{match}} tries each {{case}} in order and returns the first that fits. {{typeOf(item)}} gives the type name directly if you only need a label.` },
+
+{ id: "match-regex", title: "Spot the phone numbers", topic: "Conditionals", level: "medium",
+  desc: r`Label each string {{"phone"}} when it looks like {{555-1234}} (three digits, a dash, four digits) and {{"other"}} otherwise.`,
+  ins: [["payload", J, r`["555-1234", "hello", "555-9876", "12"]`]],
+  out: [J, r`["phone", "other", "phone", "other"]`],
+  hints: [r`Regular expressions sit between slashes: {{/\d{3}-\d{4}/}}.`, r`In a {{match}}, use {{case x matches /regex/ -> ...}} and finish with {{else}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ((item) -> item match {
+  case phone matches /\d{3}-\d{4}/ -> "phone"
+  else -> "other"
+})`,
+  why: r`{{matches}} succeeds only when the whole string fits the pattern. {{else}} is the catch-all.` },
+
+{ id: "conditional-key", title: "Senior discount", topic: "Conditionals", level: "medium",
+  desc: r`Return each person's name. Only people aged 60 or more also get a {{discount}} field with the value 10.`,
+  ins: [["payload", J, r`[
+  { "name": "Asha", "age": 17 },
+  { "name": "Meera", "age": 67 },
+  { "name": "Karan", "age": 34 }
+]`]],
+  out: [J, r`[
+  { "name": "Asha" },
+  { "name": "Meera", "discount": 10 },
+  { "name": "Karan" }
+]`],
+  hints: [r`A conditional element is a key-value pair in parentheses, followed by {{if}} and a condition.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ((person) -> {
+  name: person.name,
+  (discount: 10) if person.age >= 60
+})`,
+  why: r`If the condition is false the pair is left out of the object, rather than written as {{null}}.` },
+
+{ id: "date-reformat", title: "Change the date format", topic: "Dates", level: "medium",
+  desc: r`The input date is {{yyyy-MM-dd}}. Return it as {{dd/MM/yyyy}}.`,
+  ins: [["payload", J, r`{
+  "orderDate": "2026-11-03"
+}`]],
+  out: [J, r`{
+  "orderDate": "03/11/2026"
+}`],
+  hints: [r`Go through a real date: string to {{Date}} with a format, then back to string with another format.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  orderDate: payload.orderDate as Date {format: "yyyy-MM-dd"} as String {format: "dd/MM/yyyy"}
+}`,
+  why: r`{{as Date {format: ...}}} parses and {{as String {format: ...}}} prints. Doing it in two steps avoids mixing up day and month.` },
+
+{ id: "date-add", title: "Due in a week", topic: "Dates", level: "medium",
+  desc: r`Return a {{due}} date that is 7 days after {{start}}.`,
+  ins: [["payload", J, r`{
+  "start": "2026-11-03"
+}`]],
+  out: [J, r`{
+  "due": "2026-11-10"
+}`],
+  hints: [r`Periods are written between pipes: {{|P7D|}} is seven days.`, r`Coerce the string to a {{Date}} first, then add the period.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  due: (payload.start as Date) + |P7D|
+}`,
+  why: r`Date arithmetic uses period literals such as {{|P7D|}}, {{|P1M|}} or {{|PT2H|}}.` },
+
+{ id: "invoice", title: "Invoice with a coupon", topic: "Functions", level: "medium",
+  desc: r`Build an invoice. {{subtotal}} is the sum of {{qty * price}}. The coupon {{SAVE10}} takes 10 off, {{SAVE20}} takes 20 off, anything else takes nothing off. {{tax}} is {{taxPercent}} percent of the subtotal after the discount. {{total}} is subtotal minus discount plus tax.`,
+  ins: [["payload", J, r`{
+  "items": [
+    { "name": "Pen", "qty": 10, "price": 3 },
+    { "name": "Book", "qty": 2, "price": 15 }
+  ],
+  "taxPercent": 10,
+  "coupon": "SAVE10"
+}`]],
+  out: [J, r`{
+  "subtotal": 60,
+  "discount": 10,
+  "tax": 5,
+  "total": 55
+}`],
+  hints: [r`Declare {{var subtotal = ...}} and {{var discount = ...}} in the header so the body stays short.`, r`Map the coupon to an amount with {{match}} and a final {{else -> 0}}.`],
+  sol: r`%dw 2.0
+output application/json
+var subtotal = sum(payload.items map ($.qty * $.price))
+var discount = payload.coupon match {
+  case "SAVE10" -> 10
+  case "SAVE20" -> 20
+  else -> 0
+}
+var tax = (subtotal - discount) * payload.taxPercent / 100
+---
+{
+  subtotal: subtotal,
+  discount: discount,
+  tax: tax,
+  total: subtotal - discount + tax
+}`,
+  why: r`Variables can use earlier variables and {{payload}}. Splitting the calculation into named steps makes it easy to read and to test.` },
+
+{ id: "camelize", title: "snake_case to camelCase", topic: "Modules", level: "medium",
+  desc: r`Rename every key from snake_case to camelCase. Use the string module from the core library.`,
+  ins: [["payload", J, r`{
+  "first_name": "Ada",
+  "last_name": "Lovelace",
+  "date_of_birth": "1815-12-10"
+}`]],
+  out: [J, r`{
+  "firstName": "Ada",
+  "lastName": "Lovelace",
+  "dateOfBirth": "1815-12-10"
+}`],
+  hints: [r`{{import camelize from dw::core::Strings}} goes in the header.`, r`Keys must become strings before you call it: {{key as String}}.`],
+  sol: r`%dw 2.0
+import camelize from dw::core::Strings
+output application/json
+---
+payload mapObject ((value, key) -> {
+  (camelize(key as String)): value
+})`,
+  why: r`Anything beyond {{dw::Core}} must be imported. You can import single functions or the whole module.` },
+
+{ id: "join", title: "Orders with customer names", topic: "Modules", level: "medium",
+  desc: r`Join each order to its customer by id. Return {{orderId}}, the customer's {{name}} as {{customer}}, and the {{amount}}. Keep the order of the orders array.`,
+  ins: [["payload", J, r`{
+  "customers": [
+    { "id": 1, "name": "Asha" },
+    { "id": 2, "name": "Karan" }
+  ],
+  "orders": [
+    { "orderId": "O1", "customerId": 1, "amount": 50 },
+    { "orderId": "O2", "customerId": 2, "amount": 75 },
+    { "orderId": "O3", "customerId": 1, "amount": 20 }
+  ]
+}`]],
+  out: [J, r`[
+  { "orderId": "O1", "customer": "Asha", "amount": 50 },
+  { "orderId": "O2", "customer": "Karan", "amount": 75 },
+  { "orderId": "O3", "customer": "Asha", "amount": 20 }
+]`],
+  hints: [r`{{join}} lives in {{dw::core::Arrays}}. It takes two arrays and a key function for each.`, r`Each result is {{{ l: leftItem, r: rightItem }}}.`],
+  sol: r`%dw 2.0
+import join from dw::core::Arrays
+output application/json
+---
+join(payload.orders, payload.customers, (o) -> o.customerId, (c) -> c.id)
+  map ((pair) -> {
+    orderId: pair.l.orderId,
+    customer: pair.r.name,
+    amount: pair.l.amount
+  })`,
+  why: r`{{join}} is an inner join. {{leftJoin}} and {{outerJoin}} keep unmatched items from one or both sides.` },
+
+{ id: "divide-by", title: "Split into batches", topic: "Modules", level: "medium",
+  desc: r`Split the array into batches of three. The last batch may be shorter.`,
+  ins: [["payload", J, r`[1, 2, 3, 4, 5, 6, 7]`]],
+  out: [J, r`[[1, 2, 3], [4, 5, 6], [7]]`],
+  hints: [r`Look in {{dw::core::Arrays}} for a function that divides an array by a size.`],
+  sol: r`%dw 2.0
+import divideBy from dw::core::Arrays
+output application/json
+---
+payload divideBy 3`,
+  why: r`Batching like this is handy for calling an API that accepts at most N records at a time.` },
+
+{ id: "csv-to-json", title: "Semicolon CSV to JSON", topic: "Formats", level: "medium",
+  desc: r`The input is CSV with a {{;}} separator. Return JSON where {{id}} is a number.`,
+  ins: [["payload", "application/csv", r`id;name;city
+1;Asha;Pune
+2;Karan;Mumbai`]],
+  out: [J, r`[
+  { "id": 1, "name": "Asha", "city": "Pune" },
+  { "id": 2, "name": "Karan", "city": "Mumbai" }
+]`],
+  starter: "%dw 2.0\ninput payload application/csv separator=\";\"\noutput application/json\n---\n",
+  hints: [r`Reader settings go on the {{input}} directive: {{input payload application/csv separator=";"}}.`, r`CSV values are strings, so convert {{id}} with {{as Number}}.`],
+  sol: r`%dw 2.0
+input payload application/csv separator=";"
+output application/json
+---
+payload map ((row) -> {
+  id: row.id as Number,
+  name: row.name,
+  city: row.city
+})`,
+  why: r`Reader and writer properties such as {{separator}}, {{header}} and {{quoteValues}} are set on the directives.` },
+
+{ id: "mask-phone", title: "Mask a phone number", topic: "Strings", level: "medium",
+  desc: r`Replace every digit except the last four with {{*}}.`,
+  ins: [["payload", J, r`{
+  "phone": "9876543210"
+}`]],
+  out: [J, r`{
+  "phone": "******3210"
+}`],
+  hints: [r`{{replace}} accepts a regular expression: {{payload.phone replace /regex/ with "*"}}.`, r`A lookahead such as {{(?=\d{4})}} means "followed by four digits".`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  phone: payload.phone replace /\d(?=\d{4})/ with "*"
+}`,
+  why: r`The pattern matches one digit that still has four digits after it, which is every digit except the last four.` },
+
+/* ---------------- HARD ---------------- */
+{ id: "running-total", title: "Running total", topic: "Aggregation", level: "hard",
+  desc: r`Return an array where each item is the sum of all the numbers up to and including that position.`,
+  ins: [["payload", J, r`[10, 20, 5, 15]`]],
+  out: [J, r`[10, 30, 35, 50]`],
+  hints: [r`{{reduce}} can build an array if the accumulator starts as {{[]}}.`, r`The previous total is {{acc[-1]}}. It is {{null}} on an empty array, so add {{default 0}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload reduce ((item, acc = []) -> acc ++ [(acc[-1] default 0) + item])`,
+  why: r`Each step appends one more total. The default value of the accumulator is what makes the first step work.` },
+
+{ id: "dotted-keys", title: "Flatten to dotted keys", topic: "Objects", level: "hard",
+  desc: r`Flatten the nested object into one level. Nested keys are joined with a dot.`,
+  ins: [["payload", J, r`{
+  "user": {
+    "name": "Ravi",
+    "address": { "city": "Pune" }
+  },
+  "id": 7
+}`]],
+  out: [J, r`{
+  "user.name": "Ravi",
+  "user.address.city": "Pune",
+  "id": 7
+}`],
+  hints: [r`Write a recursive function that takes the object and the prefix so far.`, r`Use {{value is Object}} to decide between recursing and writing a pair.`],
+  sol: r`%dw 2.0
+output application/json
+fun flat(obj: Object, prefix: String = ""): Object =
+  obj mapObject ((value, key) ->
+    if (value is Object)
+      flat(value, prefix ++ (key as String) ++ ".")
+    else
+      { (prefix ++ (key as String)): value }
+  )
+---
+flat(payload)`,
+  why: r`Each {{mapObject}} step returns an object, so the nested results are merged into a single flat one.` },
+
+{ id: "update-op", title: "Update in place", topic: "Objects", level: "hard",
+  desc: r`Change the user's city to {{Mumbai}} and add one to {{logins}}. Everything else must stay exactly as it is.`,
+  ins: [["payload", J, r`{
+  "user": {
+    "name": "Ravi",
+    "address": { "city": "Pune", "zip": "411001" }
+  },
+  "logins": 4
+}`]],
+  out: [J, r`{
+  "user": {
+    "name": "Ravi",
+    "address": { "city": "Mumbai", "zip": "411001" }
+  },
+  "logins": 5
+}`],
+  hints: [r`The {{update}} operator takes a block of cases, one per path to change.`, r`A case looks like {{case old at .path.to.field -> newValue}}. {{old}} holds the current value.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload update {
+  case city at .user.address.city -> "Mumbai"
+  case n at .logins -> n + 1
+}`,
+  why: r`{{update}} rebuilds only the parts you name, so you do not have to copy every other field by hand.` },
+
+{ id: "region-totals", title: "Sales by region", topic: "Grouping", level: "hard",
+  desc: r`For each region return the total {{amount}} and the number of {{orders}}. Sort the regions by total, highest first.`,
+  ins: [["payload", J, r`[
+  { "region": "North", "product": "A", "amount": 100 },
+  { "region": "South", "product": "A", "amount": 50 },
+  { "region": "North", "product": "B", "amount": 75 },
+  { "region": "South", "product": "C", "amount": 25 },
+  { "region": "East", "product": "B", "amount": 60 }
+]`]],
+  out: [J, r`[
+  { "region": "North", "total": 175, "orders": 2 },
+  { "region": "South", "total": 75, "orders": 2 },
+  { "region": "East", "total": 60, "orders": 1 }
+]`],
+  hints: [r`Group by region first. Then {{pluck}} turns each group into one summary object.`, r`Inside the group, {{rows.amount}} is an array of amounts you can {{sum}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+((payload groupBy $.region) pluck ((rows, region) -> {
+  region: region as String,
+  total: sum(rows.amount),
+  orders: sizeOf(rows)
+})) orderBy -$.total`,
+  why: r`Group, summarise each group, then sort. The parentheses make sure {{orderBy}} applies to the finished array.` },
+
+{ id: "pivot", title: "Key-value rows to records", topic: "Grouping", level: "hard",
+  desc: r`The input has one row per attribute. Return one object per {{id}}, with each {{key}} turned into a field holding its {{value}}.`,
+  ins: [["payload", J, r`[
+  { "id": 1, "key": "color", "value": "red" },
+  { "id": 1, "key": "size", "value": "M" },
+  { "id": 2, "key": "color", "value": "blue" },
+  { "id": 2, "key": "size", "value": "L" }
+]`]],
+  out: [J, r`[
+  { "id": 1, "color": "red", "size": "M" },
+  { "id": 2, "color": "blue", "size": "L" }
+]`],
+  hints: [r`Group by id. Numbers cannot be group keys, so use {{$.id as String}}.`, r`Build each record with {{reduce}}, adding {{{ (row.key): row.value }}} for every row.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy ($.id as String)) pluck ((rows) ->
+  { id: rows[0].id } ++
+  (rows reduce ((row, acc = {}) -> acc ++ { (row.key): row.value }))
+)`,
+  why: r`A dynamic key written as {{(row.key)}} lets data decide the field names.` },
+
+{ id: "tree-paths", title: "Tree to paths", topic: "Functions", level: "hard",
+  desc: r`The input is a tree of nodes. Return every node's path as {{parent/child}} strings, parents before their children.`,
+  ins: [["payload", J, r`{
+  "name": "root",
+  "children": [
+    { "name": "a", "children": [ { "name": "a1", "children": [] } ] },
+    { "name": "b", "children": [] }
+  ]
+}`]],
+  out: [J, r`["root", "root/a", "root/a/a1", "root/b"]`],
+  hints: [r`Write a recursive function {{paths(node, prefix)}}.`, r`A node returns its own path followed by the flattened paths of its children.`],
+  sol: r`%dw 2.0
+output application/json
+fun paths(node: Object, prefix: String = ""): Array = do {
+  var current = if (isEmpty(prefix)) node.name else prefix ++ "/" ++ node.name
+  ---
+  [current] ++ flatten(node.children map ((child) -> paths(child, current)))
+}
+---
+paths(payload)`,
+  why: r`A {{do}} block gives the function body its own variables. Leaves have no children, so the recursion stops by itself.` },
+
+{ id: "transpose", title: "Transpose a matrix", topic: "Functions", level: "hard",
+  desc: r`Swap the rows and columns of the matrix.`,
+  ins: [["payload", J, r`[
+  [1, 2, 3],
+  [4, 5, 6]
+]`]],
+  out: [J, r`[
+  [1, 4],
+  [2, 5],
+  [3, 6]
+]`],
+  hints: [r`Build one output row per column index of the first row.`, r`{{map}} gives you the index as the second lambda parameter.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload[0] map ((col, i) -> payload map ((row) -> row[i]))`,
+  why: r`Nested {{map}} calls can read the index of the outer loop, which is what makes this a one-liner.` }
+,
+
+/* ---------------- ADDITIONAL EASY ---------------- */
+{ id: "trim-name", title: "Trim a customer name", topic: "Strings", level: "easy",
+  desc: r`Remove leading and trailing spaces from the customer's name.`,
+  ins: [["payload", J, r`{ "name": "  Ada Lovelace  " }`]],
+  out: [J, r`{ "name": "Ada Lovelace" }`],
+  hints: [r`Use the {{trim}} function from the Strings core module.`, r`Apply it to the name field and place the result in a new object.`],
+  sol: r`%dw 2.0
+output application/json
+---
+{
+  name: trim(payload.name)
+}`,
+  why: r`trim removes whitespace at the beginning and end of a string without changing spaces inside the value.` },
+
+{ id: "split-tags", title: "Split a comma-separated list", topic: "Strings", level: "easy",
+  desc: r`Convert the comma-separated {{tags}} string into an array. Remove the spaces around each tag.`,
+  ins: [["payload", J, r`{ "tags": "mule, dataweave, integration" }`]],
+  out: [J, r`["mule", "dataweave", "integration"]`],
+  hints: [r`{{splitBy}} turns a string into an array.`, r`Map over the resulting array and apply {{trim}} to each item.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload.tags splitBy ",") map trim($)`,
+  why: r`Splitting and trimming are separate operations. This also handles spaces inconsistently entered after delimiters.` },
+
+{ id: "merge-settings", title: "Merge default settings", topic: "Objects", level: "easy",
+  desc: r`Merge the supplied settings over the defaults. If a key exists in both objects, the supplied setting must win.`,
+  ins: [["payload", J, r`{
+  "defaults": { "theme": "light", "language": "en", "notifications": true },
+  "settings": { "theme": "dark", "notifications": false }
+}`]],
+  out: [J, r`{
+  "theme": "dark",
+  "language": "en",
+  "notifications": false
+}`],
+  hints: [r`The object concatenation operator is {{++}}.`, r`The right-hand object overrides duplicate keys from the left-hand object.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload.defaults ++ payload.settings`,
+  why: r`Object concatenation merges key-value pairs. When a key occurs on both sides, the value on the right wins.` },
+
+/* ---------------- ADDITIONAL MEDIUM ---------------- */
+{ id: "category-average", title: "Average price by category", topic: "Grouping", level: "medium",
+  desc: r`Group the products by category and return one record per category with the average price and product count. Sort by category name alphabetically.`,
+  ins: [["payload", J, r`[
+  { "name": "Pen", "category": "Stationery", "price": 10 },
+  { "name": "Book", "category": "Stationery", "price": 30 },
+  { "name": "Mug", "category": "Home", "price": 100 },
+  { "name": "Bottle", "category": "Home", "price": 50 }
+]`]],
+  out: [J, r`[
+  { "category": "Home", "averagePrice": 75, "count": 2 },
+  { "category": "Stationery", "averagePrice": 20, "count": 2 }
+]`],
+  hints: [r`Use {{groupBy}} to create one group per category.`, r`Use {{pluck}} to turn the groups into an array of summary objects. The average is {{sum(items.price) / sizeOf(items)}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy $.category)
+  pluck ((items, category) -> {
+    category: category as String,
+    averagePrice: sum(items.price) / sizeOf(items),
+    count: sizeOf(items)
+  })
+  orderBy $.category`,
+  why: r`Grouping creates an object of arrays. Pluck converts each group to a summary record, and orderBy sorts the resulting array.` },
+
+/* ---------------- ADDITIONAL HARD ---------------- */
+{ id: "running-balance", title: "Build a running account balance", topic: "Aggregation", level: "hard",
+  desc: r`Process the transactions in order. Return each transaction id, its amount, and the account balance after applying that transaction. The starting balance is zero.`,
+  ins: [["payload", J, r`[
+  { "id": "T1", "amount": 100 },
+  { "id": "T2", "amount": -25 },
+  { "id": "T3", "amount": 40 },
+  { "id": "T4", "amount": -15 }
+]`]],
+  out: [J, r`[
+  { "id": "T1", "amount": 100, "balance": 100 },
+  { "id": "T2", "amount": -25, "balance": 75 },
+  { "id": "T3", "amount": 40, "balance": 115 },
+  { "id": "T4", "amount": -15, "balance": 100 }
+]`],
+  hints: [r`Use {{reduce}} with an array as the accumulator so you can retain every intermediate balance.`, r`The previous balance is the last accumulator item's {{balance}}. Default it to zero for the first transaction.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload reduce ((tx, acc = []) -> do {
+  var previous = acc[-1].balance default 0
+  ---
+  acc ++ [{
+    id: tx.id,
+    amount: tx.amount,
+    balance: previous + tx.amount
+  }]
+})`,
+  why: r`Reduce can build more than a scalar. Keeping the output array as the accumulator lets each iteration use the previous calculated balance.` },
+
+{ id: "deep-flatten", title: "Flatten an array of any depth", topic: "Functions", level: "hard",
+  desc: r`Flatten the nested array completely. The nesting depth is not fixed, and the order of leaf values must be preserved.`,
+  ins: [["payload", J, r`[1, [2, [3, 4], []], 5, [[6]]]`]],
+  out: [J, r`[1, 2, 3, 4, 5, 6]`],
+  hints: [r`A recursive function can call itself when the current item is an array.`, r`Use a type check with {{is Array}}. Wrap non-array values in a one-item array, then flatten the mapped results.`],
+  sol: r`%dw 2.0
+output application/json
+fun flattenDeep(value) =
+  if (value is Array)
+    flatten(value map ((item) -> flattenDeep(item)))
+  else
+    [value]
+---
+flattenDeep(payload)`,
+  why: r`The recursive call keeps descending until it reaches a non-array value. Each level flattens the arrays returned by its children.` },
+
+{ id: "employee-tree", title: "Flatten an employee hierarchy", topic: "Functions", level: "hard",
+  desc: r`Convert the reporting hierarchy into a flat array. Include each employee's id, name and managerId. The top-level manager has a null managerId. Preserve depth-first order.`,
+  ins: [["payload", J, r`[
+  {
+    "id": 1, "name": "Mira",
+    "reports": [
+      { "id": 2, "name": "Dev", "reports": [
+        { "id": 4, "name": "Ira", "reports": [] }
+      ]},
+      { "id": 3, "name": "Sam", "reports": [] }
+    ]
+  }
+]`]],
+  out: [J, r`[
+  { "id": 1, "name": "Mira", "managerId": null },
+  { "id": 2, "name": "Dev", "managerId": 1 },
+  { "id": 4, "name": "Ira", "managerId": 2 },
+  { "id": 3, "name": "Sam", "managerId": 1 }
+]`],
+  hints: [r`Create a recursive function that accepts a list of nodes and the current manager id.`, r`For each node, emit its own record, then recursively process its {{reports}} using the node's id.`],
+  sol: r`%dw 2.0
+output application/json
+fun flattenReports(nodes, managerId = null) =
+  flatten(nodes map ((node) ->
+    [{ id: node.id, name: node.name, managerId: managerId }]
+    ++ flattenReports(node.reports default [], node.id)
+  ))
+---
+flattenReports(payload)`,
+  why: r`The recursive call receives the current employee id as the manager id for the next level. Flatten joins each node's own record with all descendant records.` },
+
+{ id: "category-revenue", title: "Revenue report by category", topic: "Grouping", level: "hard",
+  desc: r`Group order lines by category and calculate revenue and units sold for each category. Sort the result by revenue from highest to lowest.`,
+  ins: [["payload", J, r`[
+  { "category": "Hardware", "qty": 2, "unitPrice": 100 },
+  { "category": "Software", "qty": 3, "unitPrice": 50 },
+  { "category": "Hardware", "qty": 1, "unitPrice": 150 },
+  { "category": "Services", "qty": 2, "unitPrice": 80 }
+]`]],
+  out: [J, r`[
+  { "category": "Hardware", "revenue": 350, "units": 3 },
+  { "category": "Software", "revenue": 150, "units": 3 },
+  { "category": "Services", "revenue": 160, "units": 2 }
+]`],
+  hints: [r`Group by category first. Revenue per row is {{qty * unitPrice}}.`, r`Use pluck to create the summary array, then {{orderBy -$.revenue}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+((payload groupBy $.category)
+  pluck ((rows, category) -> {
+    category: category as String,
+    revenue: sum(rows map ($.qty * $.unitPrice)),
+    units: sum(rows.qty)
+  }))
+  orderBy -$.revenue`,
+  why: r`This is a common reporting pattern: group, aggregate multiple measures, then sort the summaries by the primary measure.` },
+
+{ id: "index-by-id", title: "Convert records into an ID lookup", topic: "Objects", level: "hard",
+  desc: r`Convert the array into an object keyed by each record's id. The id must become a string, and each value must be the full original record.`,
+  ins: [["payload", J, r`[
+  { "id": 101, "name": "Asha", "team": "API" },
+  { "id": 102, "name": "Ravi", "team": "Integration" },
+  { "id": 103, "name": "Meera", "team": "Platform" }
+]`]],
+  out: [J, r`{
+  "101": { "id": 101, "name": "Asha", "team": "API" },
+  "102": { "id": 102, "name": "Ravi", "team": "Integration" },
+  "103": { "id": 103, "name": "Meera", "team": "Platform" }
+}`],
+  hints: [r`Use {{reduce}} with an empty object as the accumulator.`, r`Add one dynamic key per item using {{(item.id as String): item}}.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload reduce ((item, acc = {}) ->
+  acc ++ { (item.id as String): item }
+)`,
+  why: r`A dynamic key is written in parentheses. Reduce merges one new key-value pair into the accumulator on every iteration.` },
+
+{ id: "whitelist-fields", title: "Apply a dynamic field whitelist", topic: "Objects", level: "hard",
+  desc: r`Return only the fields listed in the {{allowedFields}} array. The whitelist can change at runtime, so do not hardcode the field names in the transformation.`,
+  ins: [["payload", J, r`{
+  "record": {
+    "id": 7,
+    "name": "Ravi",
+    "email": "ravi@example.com",
+    "salary": 90000,
+    "department": "Engineering"
+  },
+  "allowedFields": ["id", "name", "department"]
+}`]],
+  out: [J, r`{
+  "id": 7,
+  "name": "Ravi",
+  "department": "Engineering"
+}`],
+  hints: [r`{{filterObject}} filters key-value pairs rather than array items.`, r`Its key argument is a key value; cast it to String before checking membership in the whitelist.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload.record filterObject ((value, key) ->
+  payload.allowedFields contains (key as String)
+)`,
+  why: r`The allowed fields are data, not code. Checking membership against the supplied array makes the transformation reusable for different schemas.` },
+
+{ id: "median-value", title: "Calculate the median", topic: "Aggregation", level: "hard",
+  desc: r`Calculate the median of the input numbers. For an odd number of items, return the middle value after sorting. For an even number, return the average of the two middle values.`,
+  ins: [["payload", J, r`[12, 3, 7, 20, 9, 15]`]],
+  out: [J, r`10.5`],
+  hints: [r`Sort the values first with {{orderBy}}.`, r`Use the array length to distinguish odd and even cases. The two middle indexes for an even-length array are {{(n / 2) - 1}} and {{n / 2}}.`],
+  sol: r`%dw 2.0
+output application/json
+var sorted = payload orderBy $
+var n = sizeOf(sorted)
+var mid = floor(n / 2)
+---
+if (n mod 2 == 1)
+  sorted[mid]
+else
+  (sorted[mid - 1] + sorted[mid]) / 2`,
+  why: r`The median is positional, not an average of all values. Sorting first makes the middle index meaningful for both odd and even lengths.` },
+
+{ id: "tiered-discount", title: "Apply tiered discounts and tax", topic: "Functions", level: "hard",
+  desc: r`Calculate each order's subtotal, discount rate, discount amount, tax and final total. Apply a 5% discount below 500, 10% from 500 up to but not including 1000, and 15% for 1000 or more. Tax is 18% after discount. Round monetary results to two decimal places.`,
+  ins: [["payload", J, r`[
+  { "orderId": "O1", "items": [{ "qty": 2, "price": 100 }] },
+  { "orderId": "O2", "items": [{ "qty": 2, "price": 300 }] },
+  { "orderId": "O3", "items": [{ "qty": 2, "price": 600 }] }
+]`]],
+  out: [J, r`[
+  { "orderId": "O1", "subtotal": 200, "discountRate": 0.05, "discount": 10, "tax": 34.2, "total": 224.2 },
+  { "orderId": "O2", "subtotal": 600, "discountRate": 0.1, "discount": 60, "tax": 97.2, "total": 637.2 },
+  { "orderId": "O3", "subtotal": 1200, "discountRate": 0.15, "discount": 180, "tax": 183.6, "total": 1203.6 }
+]`],
+  hints: [r`Map over orders and calculate each subtotal with {{sum}}.`, r`Use a conditional expression to select the discount rate, then calculate tax on subtotal minus discount.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ((order) -> do {
+  var subtotal = sum(order.items map ($.qty * $.price))
+  var rate = if (subtotal >= 1000) 0.15
+             else if (subtotal >= 500) 0.10
+             else 0.05
+  var discount = (subtotal * rate)
+  var tax = ((subtotal - discount) * 0.18)
+  ---
+  {
+    orderId: order.orderId,
+    subtotal: subtotal,
+    discountRate: rate,
+    discount: discount,
+    tax: tax,
+    total: (subtotal - discount + tax)
+  }
+})`,
+  why: r`The calculation is split into named intermediate values. Tax is calculated on the discounted subtotal, and the rounding helper keeps each monetary result at two decimal places.` },
+
+{ id: "customer-spend", title: "Customer lifetime spend", topic: "Grouping", level: "hard",
+  desc: r`Aggregate all orders by customer. Return customerId, numberOfOrders and lifetimeSpend. Sort by lifetimeSpend descending. Customers with multiple orders must appear only once.`,
+  ins: [["payload", J, r`[
+  { "customerId": "C1", "orderId": "O1", "amount": 100 },
+  { "customerId": "C2", "orderId": "O2", "amount": 250 },
+  { "customerId": "C1", "orderId": "O3", "amount": 75 },
+  { "customerId": "C3", "orderId": "O4", "amount": 50 },
+  { "customerId": "C2", "orderId": "O5", "amount": 150 }
+]`]],
+  out: [J, r`[
+  { "customerId": "C2", "numberOfOrders": 2, "lifetimeSpend": 400 },
+  { "customerId": "C1", "numberOfOrders": 2, "lifetimeSpend": 175 },
+  { "customerId": "C3", "numberOfOrders": 1, "lifetimeSpend": 50 }
+]`],
+  hints: [r`Group the records by {{customerId}}.`, r`Use {{pluck}} to create one summary per group, then sort by the calculated lifetime spend.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy $.customerId)
+  pluck ((orders, customerId) -> {
+    customerId: customerId as String,
+    numberOfOrders: sizeOf(orders),
+    lifetimeSpend: sum(orders.amount)
+  })
+  orderBy -$.lifetimeSpend`,
+  why: r`Grouping ensures one result per customer. Each group supplies both the count and sum needed for the summary.` },
+
+{ id: "generate-sequence", title: "Generate a numbered schedule", topic: "Functions", level: "hard",
+  desc: r`Generate {{count}} sequential task objects starting at {{start}}. Each object must contain a one-based position and the corresponding taskNumber.`,
+  ins: [["payload", J, r`{ "start": 105, "count": 4 }`]],
+  out: [J, r`[
+  { "position": 1, "taskNumber": 105 },
+  { "position": 2, "taskNumber": 106 },
+  { "position": 3, "taskNumber": 107 },
+  { "position": 4, "taskNumber": 108 }
+]`],
+  hints: [r`Create a numeric range from 0 to count minus 1.`, r`Map the range and use the index value to calculate both fields.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(0 to (payload.count - 1)) map ((offset) -> {
+  position: offset + 1,
+  taskNumber: payload.start + offset
+})`,
+  why: r`A range is inclusive at both ends. Starting at zero and ending at count minus one produces exactly count elements.` },
+
+{ id: "api-response", title: "Normalize mixed API responses", topic: "Conditionals", level: "hard",
+  desc: r`Normalize the incoming API response. If status is 200, return success true and the data. Otherwise return success false and the error message. Always include requestId. Do not include data on failures or error on success.`,
+  ins: [["payload", J, r`[
+  { "requestId": "R1", "status": 200, "data": { "id": 10, "name": "Asha" } },
+  { "requestId": "R2", "status": 404, "error": { "message": "Customer not found" } }
+]`]],
+  out: [J, r`[
+  { "requestId": "R1", "success": true, "data": { "id": 10, "name": "Asha" } },
+  { "requestId": "R2", "success": false, "error": "Customer not found" }
+]`],
+  hints: [r`Map over the response array and build a new object for each response.`, r`Use conditional object elements to include only the appropriate success or error field.`],
+  sol: r`%dw 2.0
+output application/json
+---
+payload map ((response) -> {
+  requestId: response.requestId,
+  success: response.status == 200,
+  (data: response.data) if response.status == 200,
+  (error: response.error.message) if response.status != 200
+})`,
+  why: r`Conditional object elements omit fields entirely when their condition is false. This avoids returning irrelevant null fields in a normalized API contract.` },
+
+{ id: "merge-duplicate-lines", title: "Consolidate duplicate order lines", topic: "Grouping", level: "hard",
+  desc: r`Combine order lines with the same SKU by summing their quantities. Preserve one unitPrice per SKU and calculate lineTotal as total quantity multiplied by unitPrice. Sort by SKU.`,
+  ins: [["payload", J, r`[
+  { "sku": "A1", "qty": 2, "unitPrice": 10 },
+  { "sku": "B2", "qty": 1, "unitPrice": 25 },
+  { "sku": "A1", "qty": 3, "unitPrice": 10 },
+  { "sku": "C3", "qty": 2, "unitPrice": 5 }
+]`]],
+  out: [J, r`[
+  { "sku": "A1", "qty": 5, "unitPrice": 10, "lineTotal": 50 },
+  { "sku": "B2", "qty": 1, "unitPrice": 25, "lineTotal": 25 },
+  { "sku": "C3", "qty": 2, "unitPrice": 5, "lineTotal": 10 }
+]`],
+  hints: [r`Group the order lines by SKU.`, r`For each group, use the first row's unitPrice and sum all quantities.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy $.sku)
+  pluck ((rows, sku) -> do {
+    var qty = sum(rows.qty)
+    var price = rows[0].unitPrice
+    ---
+    {
+      sku: sku as String,
+      qty: qty,
+      unitPrice: price,
+      lineTotal: qty * price
+    }
+  })
+  orderBy $.sku`,
+  why: r`Grouping consolidates repeated SKUs. The calculation uses the summed quantity and the unit price from the first matching row.` },
+
+{ id: "top-products-per-region", title: "Top product per region", topic: "Grouping", level: "hard",
+  desc: r`For each region, return the product with the highest sales amount. Return region, product and amount, with regions sorted alphabetically.`,
+  ins: [["payload", J, r`[
+  { "region": "West", "product": "A", "amount": 120 },
+  { "region": "East", "product": "B", "amount": 90 },
+  { "region": "West", "product": "C", "amount": 180 },
+  { "region": "East", "product": "D", "amount": 150 },
+  { "region": "North", "product": "E", "amount": 70 }
+]`]],
+  out: [J, r`[
+  { "region": "East", "product": "D", "amount": 150 },
+  { "region": "North", "product": "E", "amount": 70 },
+  { "region": "West", "product": "C", "amount": 180 }
+]`],
+  hints: [r`Group the rows by region.`, r`Use {{maxBy $.amount}} within each group to find the winning record.`],
+  sol: r`%dw 2.0
+output application/json
+---
+(payload groupBy $.region)
+  pluck ((rows, region) -> do {
+    var winner = rows maxBy $.amount
+    ---
+    {
+      region: region as String,
+      product: winner.product,
+      amount: winner.amount
+    }
+  })
+  orderBy $.region`,
+  why: r`maxBy returns the original object with the highest selected value. Grouping first makes the comparison independent for each region.` }
+];
+
+const byId = Object.fromEntries(Q.map(q => [q.id, q]));
+</script>
+<script>
+"use strict";
+const LV = { easy: { label: "Easy", pts: 10 }, medium: { label: "Medium", pts: 20 }, hard: { label: "Hard", pts: 40 } };
+const RANKS = [["Trainee", 0], ["Apprentice", 0.08], ["Weaver", 0.2], ["Senior Weaver", 0.4], ["Master Weaver", 0.65], ["Grandmaster", 0.9]];
+let PTS_MAX = Q.reduce((a, q) => a + LV[q.level].pts, 0);
+const app = document.getElementById("app");
+const $ = (s, root) => (root || document).querySelector(s);
+
+/* ---------- text helpers ---------- */
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const fmt = t => t.trim().split(/\n\s*\n/).map(p => "<p>" + esc(p.trim()).replace(/\{\{(.+?)\}\}(?!\})/g, "<code>$1</code>") + "</p>").join("");
+const TOK = /(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*")|(\/(?:[^\/\\\n]|\\.)+\/)|(\b\d+(?:\.\d+)?\b)|(%dw 2\.0|---)|(\b(?:fun|var|do|output|input|import|from|as|is|match|case|else|if|default|and|or|not|update|at|with|matches|type|namespace)\b)|(\b(?:true|false|null)\b)/g;
+function hl(src) {
+  let out = "", last = 0, m;
+  TOK.lastIndex = 0;
+  while ((m = TOK.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? "c" : (m[2] || m[3]) ? "s" : m[4] ? "n" : m[5] ? "h" : m[6] ? "k" : "n";
+    out += '<span class="t-' + cls + '">' + esc(m[0]) + "</span>";
+    last = TOK.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+const CHECK = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let toastTimer = 0;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3400);
+}
+
+/* ---------- progress state ---------- */
+const USER_KEY = "weaverank:active-user:v1";
+let activeUsername = "";
+try { activeUsername = (localStorage.getItem(USER_KEY) || "").trim(); } catch (e) {}
+const userPrefix = () => "weaverank:user:" + encodeURIComponent(activeUsername.toLowerCase()) + ":";
+const scopedKey = k => userPrefix() + k.replace(/^weaverank:/, "");
+const LS_KEY = "weaverank:progress:v1", LS_F = "weaverank:filters:v1";
+function lsGet(k) { try { return localStorage.getItem(scopedKey(k)); } catch (e) { return null; } }
+function lsSet(k, v) {
+  try { localStorage.setItem(scopedKey(k), v); const el = document.getElementById("save-status"); if (el) el.textContent = "Saved for " + (activeUsername || "guest") + " on this device."; return true; }
+  catch (e) { const el = document.getElementById("save-status"); if (el) el.textContent = "Browser storage is unavailable — export a backup to keep your work."; return false; }
+}
+const BASE_QUESTIONS = Q.slice();
+const BASE_TOPICS = TOPICS.slice();
+let customQuestions = [];
+function loadCustomQuestions() {
+  TOPICS.splice(0, TOPICS.length, ...BASE_TOPICS);
+  try {
+    const saved = JSON.parse(lsGet("weaverank:custom-questions:v1") || "[]");
+    customQuestions = Array.isArray(saved) ? saved.filter(q => q && typeof q.id === "string" && q.id.startsWith("custom-") && typeof q.title === "string" && typeof q.sol === "string" && Array.isArray(q.ins) && Array.isArray(q.out) && Array.isArray(q.hints)) : [];
+  } catch (e) { customQuestions = []; }
+  Q.splice(0, Q.length, ...BASE_QUESTIONS, ...customQuestions);
+  Object.keys(byId).forEach(k => delete byId[k]);
+  Q.forEach(q => { byId[q.id] = q; });
+  customQuestions.forEach(q => {
+    if (!TOPICS.some(t => t.name === q.topic)) TOPICS.push({ name: q.topic, ico: "AI" });
+  });
+  PTS_MAX = Q.reduce((a, q) => a + LV[q.level].pts, 0);
+}
+function saveCustomQuestions() {
+  lsSet("weaverank:custom-questions:v1", JSON.stringify(customQuestions));
+}
+loadCustomQuestions();
+
+function norm(o) {
+  const m = x => (x && typeof x === "object" && !Array.isArray(x)) ? x : {};
+  o = m(o);
+  const done = {}, peek = {}, hint = {};
+  for (const [k, v] of Object.entries(m(o.done))) if (byId[k]) done[k] = { t: +(v && v.t) || 0, peek: !!(v && v.peek), bonus: !!(v && v.bonus) };
+  for (const k of Object.keys(m(o.peek))) if (byId[k]) peek[k] = 1;
+  for (const [k, v] of Object.entries(m(o.hint))) if (byId[k]) hint[k] = Math.max(0, Math.min(byId[k].hints.length, +v || 0));
+  return { u: +o.u || 0, done, peek, hint };
+}
+function loadLocal() { try { return norm(JSON.parse(lsGet(LS_KEY) || "{}")); } catch (e) { return norm({}); } }
+let S = loadLocal();
+let syncMode = "local", ref = null, remoteBusy = false, remoteDirty = false;
+
+function persist() {
+  S.u = Date.now();
+  lsSet(LS_KEY, JSON.stringify(S));
+  pushRemote();
+}
+async function pushRemote() {
+  if (!ref) return;
+  remoteDirty = true;
+  if (remoteBusy) return;
+  remoteBusy = true;
+  try {
+    while (remoteDirty) {
+      remoteDirty = false;
+      await ref.set(JSON.parse(JSON.stringify(S)));
+    }
+  } catch (e) {
+    syncMode = "local";
+    paintSync();
+  } finally {
+    remoteBusy = false;
+  }
+}
+async function initRemote() {
+  if (!(window.claude && window.claude.use)) return;
+  const limit = (p, ms) => Promise.race([p, new Promise(res => setTimeout(() => res(null), ms))]);
+  try {
+    const user = await limit(window.claude.use("user"), 10000);
+    const uid = user ? await user.id() : null;
+    const db = uid ? await limit(window.claude.use("db"), 10000) : null;
+    if (!db) return;
+    const r = db.doc("data/users/" + uid + "/progress");
+    const snap = await limit(r.get(), 10000);
+    if (!snap) return;
+    ref = r;
+    const remote = snap.exists ? norm(snap.data()) : null;
+    if (remote && remote.u > S.u) {
+      S = remote;
+      lsSet(LS_KEY, JSON.stringify(S));
+    } else if (S.u > 0) {
+      pushRemote();
+    }
+    syncMode = "account";
+    paintSync();
+    render();
+  } catch (e) { /* stay on browser storage */ }
+}
+
+/* ---------- scoring, ranks and badges ---------- */
+const solvedCount = (st) => Object.keys((st || S).done).length;
+function qPts(q, st) {
+  const d = (st || S).done[q.id];
+  return LV[q.level].pts * (d && d.peek ? 0.5 : (d && d.bonus) ? 2 : 1);
+}
+function points(st) { return Q.reduce((a, q) => a + ((st || S).done[q.id] ? qPts(q, st) : 0), 0); }
+function rankInfo() {
+  const pts = points();
+  let cur = RANKS[0], next = null;
+  for (let i = 0; i < RANKS.length; i++) {
+    if (pts >= Math.round(RANKS[i][1] * PTS_MAX)) { cur = RANKS[i]; next = RANKS[i + 1] || null; }
+  }
+  return { pts, name: cur[0], next: next ? { name: next[0], at: Math.round(next[1] * PTS_MAX) } : null };
+}
+function badgeData(st) {
+  st = st || S;
+  const topics = TOPICS.map(t => {
+    const qs = Q.filter(q => q.topic === t.name);
+    const n = qs.filter(q => st.done[q.id]).length;
+    let stars = 0;
+    if (n >= 1) stars = 1;
+    if (n >= Math.max(2, Math.ceil(qs.length * 0.6))) stars = 2;
+    if (n === qs.length) stars = 3;
+    return Object.assign({}, t, { total: qs.length, solved: n, stars });
+  });
+  const total = Q.length, solved = solvedCount(st);
+  const clean = Q.filter(q => st.done[q.id] && !st.done[q.id].peek).length;
+  const firstTry = Q.filter(q => st.done[q.id] && st.done[q.id].bonus).length;
+  const lvl = l => { const qs = Q.filter(q => q.level === l); return [qs.filter(q => st.done[q.id]).length, qs.length]; };
+  const [e1, e2] = lvl("easy"), [m1, m2] = lvl("medium"), [h1, h2] = lvl("hard");
+  const half = Math.ceil(total / 2);
+  const ach = [
+    { id: "first", ico: "1st", name: "First Weave", desc: "Solve your first problem.", earned: solved >= 1, prog: Math.min(solved, 1) + "/1" },
+    { id: "clean", ico: "x5", name: "No Peeking", desc: "Solve 5 problems without showing the answer.", earned: clean >= 5, prog: Math.min(clean, 5) + "/5" },
+    { id: "easy", ico: "E", name: "Warm-up Done", desc: "Solve every Easy problem.", earned: e1 === e2, prog: e1 + "/" + e2 },
+    { id: "medium", ico: "M", name: "Mid-level", desc: "Solve every Medium problem.", earned: m1 === m2, prog: m1 + "/" + m2 },
+    { id: "hard", ico: "H", name: "Hard Hitter", desc: "Solve every Hard problem.", earned: h1 === h2, prog: h1 + "/" + h2 },
+    { id: "half", ico: "1/2", name: "Halfway There", desc: "Solve half of all problems.", earned: solved >= half, prog: Math.min(solved, half) + "/" + half },
+    { id: "round", ico: "all", name: "Well Rounded", desc: "Earn at least a bronze badge in every topic.", earned: topics.every(t => t.stars >= 1), prog: topics.filter(t => t.stars >= 1).length + "/" + topics.length },
+    { id: "firsttry", ico: "2x", name: "First Try", desc: "Get 3 problems right with no hints and no answer shown.", earned: firstTry >= 3, prog: Math.min(firstTry, 3) + "/3" }
+  ];
+  return { topics, ach };
+}
+function earnedMap(st) {
+  const m = new Map(), tier = ["", "Bronze", "Silver", "Gold"], b = badgeData(st);
+  b.topics.forEach(t => { for (let s = 1; s <= t.stars; s++) m.set("T:" + t.name + ":" + s, t.name + " " + tier[s]); });
+  b.ach.forEach(a => { if (a.earned) m.set("A:" + a.id, a.name); });
+  return m;
+}
+function starPts(cx, cy, R, r) {
+  const p = [];
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R;
+    p.push((cx + Math.cos(a) * rad).toFixed(1) + "," + (cy + Math.sin(a) * rad).toFixed(1));
+  }
+  return p.join(" ");
+}
+function hex(ico, tier, label, stars) {
+  const showStars = stars !== null && stars !== undefined;
+  const ty = showStars ? 54 : 60;
+  let s = '<svg viewBox="0 0 96 104" class="hexb t' + tier + '" role="img" aria-label="' + esc(label) + (tier ? "" : " (locked)") + '">' +
+    '<polygon class="hx" points="48,3 90,27 90,75 48,99 6,75 6,27"/>' +
+    '<polygon class="hx2" points="48,13 81,32 81,70 48,89 15,70 15,32"/>' +
+    '<text class="hx-t" x="48" y="' + ty + '" text-anchor="middle">' + esc(ico) + "</text>";
+  if (showStars) for (let i = 0; i < 3; i++) s += '<polygon class="star' + (i < stars ? " on" : "") + '" points="' + starPts(34 + i * 14, 74, 5.6, 2.5) + '"/>';
+  return s + "</svg>";
+}
+
+/* ---------- filters ---------- */
+let F = { lvl: "all", st: "all", topic: "all", q: "" };
+try {
+  const f = JSON.parse(lsGet(LS_F) || "{}");
+  if (["all", "easy", "medium", "hard"].includes(f.lvl)) F.lvl = f.lvl;
+  if (["all", "done", "todo"].includes(f.st)) F.st = f.st;
+  if (f.topic === "all" || TOPICS.some(t => t.name === f.topic)) F.topic = f.topic;
+} catch (e) { /* defaults */ }
+const saveF = () => lsSet(LS_F, JSON.stringify({ lvl: F.lvl, st: F.st, topic: F.topic }));
+function visible() {
+  const t = F.q.trim().toLowerCase();
+  return Q.filter(q => {
+    if (F.lvl !== "all" && q.level !== F.lvl) return false;
+    const d = !!S.done[q.id];
+    if (F.st === "done" && !d) return false;
+    if (F.st === "todo" && d) return false;
+    if (F.topic !== "all" && q.topic !== F.topic) return false;
+    if (t && !(q.title + " " + q.topic + " " + q.desc).toLowerCase().includes(t)) return false;
+    return true;
+  });
+}
+
+/* ---------- views ---------- */
+function route() {
+  const h = location.hash.slice(1);
+  if (h.startsWith("q-") && byId[h.slice(2)]) return { v: "problem", q: byId[h.slice(2)] };
+  if (h === "badges") return { v: "badges" };
+  if (h === "custom") return { v: "custom" };
+  if (h === "profile" || !activeUsername) return { v: "profile" };
+  return { v: "list" };
+}
+let cur = null, showAns = false, confirmPeek = false;
+
+function render() {
+  const rt = route();
+  const np = $("#nav-problems"), nc = $("#nav-custom"), nb = $("#nav-badges"), npr = $("#nav-profile");
+  [np, nc, nb, npr].forEach(x => x.removeAttribute("aria-current"));
+  (rt.v === "badges" ? nb : rt.v === "profile" ? npr : rt.v === "custom" ? nc : np).setAttribute("aria-current", "page");
+  paintStats(); paintSync();
+  if (rt.v === "problem") renderProblem(rt.q);
+  else if (rt.v === "badges") { cur = null; renderBadges(); }
+  else if (rt.v === "profile") { cur = null; renderProfile(); }
+  else if (rt.v === "custom") { cur = null; renderCustomPractice(); }
+  else { cur = null; renderList(); }
+}
+function paintStats() {
+  const r = rankInfo();
+  $("#stats").innerHTML = (activeUsername ? '<span class="stat">User <b>' + esc(activeUsername) + '</b></span>' : "") + '<span class="stat"><b>' + r.pts + '</b> pts</span><span class="stat">Rank <b>' + esc(r.name) + '</b></span><span class="stat"><b>' + solvedCount() + "/" + Q.length + "</b> solved</span>";
+}
+function paintSync() {
+  $("#sync").textContent = syncMode === "account" ? "Progress is saved to your Claude account." : "Progress is saved in this browser.";
+}
+
+function resultsHTML() {
+  const list = visible();
+  const head = '<div class="count">' + list.length + " of " + Q.length + " problems</div>";
+  if (!list.length) return head + '<div class="empty">No problems match these filters. Try another difficulty or clear the search.</div>';
+  return head + '<div class="rows">' + list.map(q => {
+    const d = !!S.done[q.id];
+    return '<a class="row" href="#q-' + q.id + '">' +
+      '<span class="r-state' + (d ? " is-done" : "") + '">' + (d ? CHECK : "") + '<span class="sr">' + (d ? "Completed" : "Not completed") + "</span></span>" +
+      '<span><span class="r-title">' + esc(q.title) + '</span><span class="r-sub">' + esc(q.topic) + " &middot; " + (d ? qPts(q) : LV[q.level].pts) + " pts</span></span>" +
+      '<span class="chip lv-' + q.level + '">' + LV[q.level].label + "</span>" +
+      '<span class="r-go">' + (d ? "Review" : "Solve") + "</span></a>";
+  }).join("") + "</div>";
+}
+function renderList() {
+  const r = rankInfo();
+  const meter = l => {
+    const qs = Q.filter(q => q.level === l), a = qs.filter(q => S.done[q.id]).length;
+    return '<div class="meter m-' + l + '"><span>' + LV[l].label + '</span><div class="bar"><i style="width:' + (qs.length ? a / qs.length * 100 : 0) + '%"></i></div><span class="n">' + a + "/" + qs.length + "</span></div>";
+  };
+  const cnt = l => Q.filter(q => l === "all" || q.level === l).length;
+  const done = solvedCount();
+  const seg = (group, items) => '<div class="seg" role="group" aria-label="' + group + '">' + items.map(i =>
+    '<button type="button" data-act="f-' + group + '" data-v="' + i[0] + '" aria-pressed="' + (F[group] === i[0]) + '">' + i[1] + "<small>" + i[2] + "</small></button>").join("") + "</div>";
+  app.innerHTML =
+    '<section class="intro"><div><h1>DataWeave practice</h1><p>Write the script, check the output, and earn badges as you work through the language, from selectors to recursion.</p></div>' +
+    '<div class="meters">' + meter("easy") + meter("medium") + meter("hard") +
+    '<div class="next-rank">' + (r.next ? (r.next.at - r.pts) + " pts to " + esc(r.next.name) : "Top rank reached") + "</div></div></section>" +
+    '<section class="filters" aria-label="Filters">' +
+    '<div class="fgroup"><span class="fl">Difficulty</span>' + seg("lvl", [["all", "All", cnt("all")], ["easy", "Easy", cnt("easy")], ["medium", "Medium", cnt("medium")], ["hard", "Hard", cnt("hard")]]) + "</div>" +
+    '<div class="fgroup"><span class="fl">Status</span>' + seg("st", [["all", "All", Q.length], ["done", "Completed", done], ["todo", "Incomplete", Q.length - done]]) + "</div>" +
+    '<div class="fgroup"><label for="f-topic">Topic</label><select id="f-topic" class="field"><option value="all">All topics</option>' +
+    TOPICS.map(t => '<option value="' + esc(t.name) + '"' + (F.topic === t.name ? " selected" : "") + ">" + esc(t.name) + "</option>").join("") + "</select></div>" +
+    '<input id="f-q" class="field fsearch" type="search" placeholder="Search problems" aria-label="Search problems" value="' + esc(F.q) + '"></section>' +
+    '<div id="results">' + resultsHTML() + "</div>";
+}
+
+function dataBlock(id, label, mime, body) {
+  const pretty = (mime.indexOf("json") >= 0) ? hl(body) : esc(body);
+  return '<section class="card data"><div class="data-h"><span class="data-l"><b>' + esc(label) + "</b><i>" + esc(mime) + '</i></span><button type="button" class="mini" data-act="copy" data-t="' + id + '">Copy</button></div>' +
+    '<pre class="code" id="' + id + '"><code>' + pretty + "</code></pre></section>";
+}
+function starterFor(q) { return q.starter || "%dw 2.0\noutput " + q.out[0] + "\n---\n"; }
+function renderProblem(q) {
+  cur = q; showAns = false; confirmPeek = false;
+  const i = Q.indexOf(q);
+  const prev = Q[i - 1];
+  let nx = Q.slice(i + 1).concat(Q.slice(0, i)).find(x => !S.done[x.id]) || Q[i + 1];
+  app.innerHTML =
+    '<a class="back" href="#problems">&larr; All problems</a>' +
+    '<div class="p-head"><h1>' + esc(q.title) + '</h1><div class="p-meta"><span class="chip lv-' + q.level + '">' + LV[q.level].label + '</span><span class="chip topic">' + esc(q.topic) + '</span><span id="pstatus"></span></div></div>' +
+    '<div class="split"><div class="col">' +
+    '<section class="card prose">' + fmt(q.desc) + "</section>" +
+    (q.useCase ? '<section class="card prose"><b>Real-world use case</b><p>' + esc(q.useCase) + '</p></section>' : "") +
+    q.ins.map((x, n) => dataBlock("in" + n, "Input: " + x[0], x[1], x[2])).join("") +
+    dataBlock("expected", "Expected output", q.out[0], q.out[1]) +
+    '<p class="note">Whitespace and line breaks in the output do not matter. The structure and values do.</p>' +
+    '</div><div class="col col-r"><section class="card editor">' +
+    '<div class="data-h"><span class="data-l"><b>script.dwl</b><i>your solution</i></span><button type="button" class="mini" data-act="reset">Reset code</button></div>' +
+    '<textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="DataWeave script"></textarea>' +
+    '<div class="editor-note">Run it in Anypoint Studio or the <a href="https://dataweave.mulesoft.com/learn/playground" target="_blank" rel="noopener noreferrer">DataWeave Playground</a>, then paste its output below. Tab indents. Press Esc, then Tab, to leave the box.</div>' +
+    '<div class="check"><div class="check-head"><label for="outbox">Check your output</label><button type="button" class="mini" data-act="paste">Paste</button></div><textarea id="outbox" wrap="soft" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Paste your DataWeave output here" placeholder="Tap here, then long-press and choose Paste. Your JSON output will appear here."></textarea><div class="check-tip">On mobile: tap inside the box and long-press to paste. You can also use the Paste button if clipboard access is allowed by your browser.</div><div class="check-row"><button type="button" class="btn primary" data-act="check">Check my output</button><span id="bonusline" class="bonus"></span></div><div id="verdict" role="status"></div></div>' +
+    '<div id="dyn"></div></section></div></div>' +
+    '<nav class="p-nav" aria-label="Problem navigation">' +
+    (prev ? '<a class="btn ghost" href="#q-' + prev.id + '">&larr; ' + esc(prev.title) + "</a>" : "<span></span>") +
+    (nx && nx !== q ? '<a class="btn ghost" href="#q-' + nx.id + '">' + (S.done[nx.id] ? "Next" : "Next unsolved") + ": " + esc(nx.title) + " &rarr;</a>" : "") + "</nav>";
+  $("#editor").value = lsGet("weaverank:draft:" + q.id) || starterFor(q);
+  $("#outbox").value = lsGet("weaverank:out:" + q.id) || "";
+  paintStatus(); paintDyn();
+}
+function paintStatus() {
+  if (!cur) return;
+  const d = S.done[cur.id];
+  $("#pstatus").innerHTML = d ? '<span class="chip st-done">' + CHECK + " Completed &middot; " + qPts(cur) + " pts" + (d.bonus ? " (double)" : "") + "</span>" : '<span class="chip st-todo">Not solved yet</span>';
+}
+function paintDyn() {
+  if (!cur) return;
+  const q = cur, id = q.id, d = S.done[id], n = S.hint[id] || 0, peeked = !!S.peek[id];
+  let h = '<div class="actions">' +
+    '<button type="button" class="btn ghost" data-act="hint"' + (n >= q.hints.length ? " disabled" : "") + ">" + (n === 0 ? "Show hint" : n < q.hints.length ? "Next hint" : "No more hints") + " (" + n + "/" + q.hints.length + ")</button>" +
+    '<button type="button" class="btn ghost" data-act="reveal">' + (showAns ? "Hide answer" : "Show answer") + "</button>" +
+    (d ? '<button type="button" class="btn" data-act="unsolve">Mark incomplete</button>' : "") + "</div>";
+  if (confirmPeek) h += '<div class="confirm"><span>Showing the answer cuts the points for this problem in half. Try one more hint first?</span><div><button type="button" class="btn" data-act="reveal-yes">Show answer</button><button type="button" class="btn ghost" data-act="reveal-no">Keep trying</button></div></div>';
+  if (n > 0) h += '<ol class="hints" aria-label="Hints">' + q.hints.slice(0, n).map((t, k) => "<li><b>" + (k + 1) + "</b><span>" + fmt(t).replace(/^<p>|<\/p>$/g, "") + "</span></li>").join("") + "</ol>";
+  if (showAns) h += '<div class="answer"><div class="data-h"><span class="data-l"><b>Solution</b><i>one of several valid answers</i></span><button type="button" class="mini" data-act="copy" data-t="sol">Copy</button></div><pre class="code" id="sol"><code>' + hl(q.sol) + '</code></pre><div class="why">' + fmt(q.why) + "</div></div>";
+  if (!d && peeked) h += '<p class="note">The answer has been shown, so this problem counts for ' + (LV[q.level].pts / 2) + " points when you mark it solved.</p>";
+  $("#dyn").innerHTML = h;
+  paintBonus();
+}
+
+/* compare-start */
+const eligibleBonus = id => !(S.hint[id] > 0) && !S.peek[id];
+function paintBonus() {
+  const el = $("#bonusline");
+  if (!el || !cur) return;
+  const d = S.done[cur.id];
+  if (d && d.bonus) { el.className = "bonus"; el.textContent = "Double points earned"; }
+  else if (eligibleBonus(cur.id)) { el.className = "bonus"; el.textContent = "No hints, no answer: a match scores double (" + (LV[cur.level].pts * 2) + " pts)"; }
+  else { el.className = "bonus off"; el.textContent = "Double points are off for this problem (a hint or the answer was used)"; }
+}
+function jt(v) { return v === null ? "null" : Array.isArray(v) ? "array" : typeof v; }
+function brief(v) { const s = JSON.stringify(v); return s.length > 40 ? s.slice(0, 37) + "..." : s; }
+function diffJSON(e, a, p, out) {
+  if (out.length >= 5) return;
+  const te = jt(e), ta = jt(a);
+  if (te !== ta) { out.push(p + ": expected " + brief(e) + ", got " + brief(a)); return; }
+  if (te === "array") {
+    if (e.length !== a.length) out.push(p + ": expected " + e.length + " items, got " + a.length);
+    const n = Math.min(e.length, a.length);
+    for (let i = 0; i < n; i++) diffJSON(e[i], a[i], p + "[" + i + "]", out);
+  } else if (te === "object") {
+    for (const k of Object.keys(e)) {
+      if (!(k in a)) out.push(p + "." + k + ": missing");
+      else diffJSON(e[k], a[k], p + "." + k, out);
+    }
+    for (const k of Object.keys(a)) if (!(k in e)) out.push(p + "." + k + ": not expected");
+  } else if (e !== a) out.push(p + ": expected " + brief(e) + ", got " + brief(a));
+}
+function compareOutput(q, raw) {
+  if (q.out[0].indexOf("json") >= 0) {
+    const e = JSON.parse(q.out[1]);
+    let a;
+    try { a = JSON.parse(raw); }
+    catch (err) { return { ok: false, notes: ["That is not valid JSON. Paste only the output panel from the playground, not the script."] }; }
+    const d = [];
+    diffJSON(e, a, "$", d);
+    return { ok: d.length === 0, notes: d.slice(0, 5) };
+  }
+  const lines = s => s.replace(/\r/g, "").trim().split("\n").map(l => l.replace(/\s+$/, ""));
+  const e = lines(q.out[1]), a = lines(raw), notes = [];
+  const n = Math.max(e.length, a.length);
+  for (let i = 0; i < n && notes.length < 5; i++) {
+    if (e[i] !== a[i]) notes.push("Line " + (i + 1) + ": expected " + (e[i] === undefined ? "no line" : JSON.stringify(e[i])) + ", got " + (a[i] === undefined ? "no line" : JSON.stringify(a[i])));
+  }
+  return { ok: notes.length === 0, notes };
+}
+/* compare-end */
+async function pasteOutput() {
+  const box = $("#outbox");
+  if (!box) return;
+  box.focus();
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      const clip = await navigator.clipboard.readText();
+      if (clip) {
+        const start = box.selectionStart ?? box.value.length;
+        const end = box.selectionEnd ?? start;
+        box.setRangeText(clip, start, end, "end");
+        box.dispatchEvent(new Event("input", { bubbles: true }));
+        toast("Output pasted");
+        return;
+      }
+    }
+  } catch (e) { /* Browser may block clipboard access for local HTML files. */ }
+  toast("Tap the output box, then long-press and choose Paste");
+}
+function checkOutput() {
+  const q = cur, id = q.id, raw = $("#outbox").value, v = $("#verdict");
+  if (!raw.trim()) { v.innerHTML = '<div class="verdict bad">Paste the output from the playground first.</div>'; return; }
+  const res = compareOutput(q, raw);
+  if (!res.ok) {
+    v.innerHTML = '<div class="verdict bad"><b>Not a match yet.</b>' + (res.notes.length ? "<ul>" + res.notes.map(n => "<li>" + esc(n) + "</li>").join("") + "</ul>" : "") + "</div>";
+    return;
+  }
+  const before = earnedMap(), bonus = eligibleBonus(id), d = S.done[id];
+  let msg, toastMsg;
+  if (!d) {
+    S.done[id] = { t: Date.now(), peek: !!S.peek[id], bonus };
+    persist();
+    const gained = qPts(q);
+    msg = "+" + gained + " pts" + (bonus ? ". Double points: no hints and no answer." : S.peek[id] ? ". Half points because the answer was shown." : ".");
+    toastMsg = "Matches! +" + gained + " pts" + (bonus ? " (double)" : "");
+  } else if (bonus && !d.bonus) {
+    d.bonus = true;
+    persist();
+    msg = "Already complete, and now it scores double (" + qPts(q) + " pts).";
+    toastMsg = "Double points added";
+  } else {
+    msg = "This problem was already marked complete.";
+    toastMsg = "Matches";
+  }
+  const fresh = afterProgress(before);
+  v.innerHTML = '<div class="verdict ok"><b>Matches.</b> ' + esc(msg) + "</div>";
+  toast(toastMsg + (fresh.length ? ". Badge earned: " + fresh[0] + (fresh.length > 1 ? " (+" + (fresh.length - 1) + " more)" : "") : ""));
+}
+
+function switchProfile() {
+  const input = $("#username-input");
+  const next = (input && input.value || "").trim().replace(/\s+/g, " ");
+  if (next.length < 2) { toast("Username must contain at least 2 characters"); if (input) input.focus(); return; }
+  if (next.length > 24) { toast("Username must be 24 characters or fewer"); return; }
+  if (next.toLowerCase() === activeUsername.toLowerCase()) {
+    history.replaceState(null, "", location.pathname + location.search + "#problems");
+    render();
+    return;
+  }
+
+  // Save the profile being left under its own username key.
+  if (activeUsername) lsSet(LS_KEY, JSON.stringify(S));
+
+  // Change identity first, then load only that username's isolated data.
+  activeUsername = next;
+  try { localStorage.setItem(USER_KEY, activeUsername); } catch (e) {}
+  loadCustomQuestions();
+  S = loadLocal();
+
+  F = { lvl: "all", st: "all", topic: "all", q: "" };
+  try {
+    const f = JSON.parse(lsGet(LS_F) || "{}");
+    if (["all", "easy", "medium", "hard"].includes(f.lvl)) F.lvl = f.lvl;
+    if (["all", "done", "todo"].includes(f.st)) F.st = f.st;
+    if (f.topic === "all" || TOPICS.some(t => t.name === f.topic)) F.topic = f.topic;
+  } catch (e) {}
+
+  // A username switch must not keep an old cloud document reference.
+  ref = null;
+  syncMode = "local";
+  cur = null;
+  showAns = false;
+  confirmPeek = false;
+  history.replaceState(null, "", location.pathname + location.search + "#problems");
+  render();
+  toast("Now using " + activeUsername + "'s profile");
+}
+function renderProfile() {
+  const b = badgeData(S);
+  const earned = [];
+  b.topics.forEach(t => {
+    const tier = ["", "Bronze", "Silver", "Gold"];
+    if (t.stars) earned.push({ name: t.name + " " + tier[t.stars], ico: t.ico, tier: t.stars });
+  });
+  b.ach.forEach(a => { if (a.earned) earned.push({ name: a.name, ico: a.ico, tier: 3 }); });
+  const r = rankInfo();
+  app.innerHTML = '<section class="profile-wrap">' +
+    '<div class="profile-hero"><div><h1>Your profile</h1><p class="profile-note">Choose a username to keep your own solved problems, points, drafts, outputs and badges separate from other users on this browser.</p>' +
+    '<div class="profile-form"><input id="username-input" maxlength="24" minlength="2" autocomplete="username" placeholder="Enter a username" value="' + esc(activeUsername) + '"><button class="btn primary" type="button" data-act="switch-profile">' + (activeUsername ? "Switch profile" : "Create profile") + '</button></div>' +
+    '<p class="profile-note">Switching to a different username opens a fresh profile. Your previous username’s progress remains saved and will return if you switch back.</p></div>' +
+    '<div><span class="chip topic">ACTIVE PROFILE</span><h2 style="margin-top:8px">' + (activeUsername ? esc(activeUsername) : "No username yet") + '</h2></div></div>' +
+    (activeUsername ? '<div class="profile-stats"><div class="profile-stat"><b>' + solvedCount() + '/' + Q.length + '</b><span>Problems solved</span></div><div class="profile-stat"><b>' + r.pts + '</b><span>Points</span></div><div class="profile-stat"><b>' + esc(r.name) + '</b><span>Current rank</span></div></div>' +
+    '<div class="section-h"><h2>Earned badges</h2><p>' + earned.length + ' badges unlocked</p></div>' +
+    (earned.length ? '<div class="profile-badges">' + earned.map(x => '<div class="profile-badge">' + hex(x.ico, x.tier, x.name, null) + '<strong>' + esc(x.name) + '</strong></div>').join("") + '</div>' : '<div class="empty">No badges earned yet. Solve problems to unlock your first badge.</div>') +
+    '<div class="profile-note">Your profile data is stored locally in this browser. Export a backup before clearing browser data or moving to another device.</div>' : '<div class="empty" style="margin-top:16px">Create a username to start your own DataWeave journey.</div>') +
+    '</section>';
+
+}
+
+function renderCustomPractice() {
+  const counts = { easy: 0, medium: 0, hard: 0 };
+  customQuestions.forEach(q => counts[q.level]++);
+  app.innerHTML = '<section class="custom-wrap">' +
+    '<div class="custom-hero"><h1>AI Custom Practice</h1><p>Enter any DataWeave or MuleSoft topic and generate original coding challenges with realistic JSON payloads, expected outputs, progressive hints, complete DataWeave solutions and real-world context.</p>' +
+    '<div class="custom-form">' +
+    '<div class="custom-field"><label for="custom-topic">Topic</label><input id="custom-topic" maxlength="120" placeholder="e.g. reduce, groupBy, recursion, error handling" autocomplete="off"></div>' +
+    '<div class="custom-field"><label for="custom-level">Difficulty</label><select id="custom-level"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>' +
+    '<div class="custom-field"><label for="custom-count">Questions</label><select id="custom-count"><option value="5">5 questions</option><option value="10" selected>10 questions</option><option value="15">15 questions</option><option value="20">20 questions</option></select></div>' +
+    '<button type="button" class="btn primary" data-act="generate-custom"' + (generatingCustom ? ' disabled' : '') + '>' + (generatingCustom ? 'Generating…' : 'Generate questions') + '</button></div>' +
+    '<div class="custom-hint">Generated questions are saved to the active username profile and appear in the main Problems list. AI generation requires the secure backend included with the hosted deployment.</div>' +
+    (generatingCustom ? '<p class="custom-loading">Generating questions. This can take a few moments…</p>' : '') + '</div>' +
+    '<div class="section-h"><h2>Your custom questions</h2><p>' + customQuestions.length + ' saved · ' + counts.easy + ' easy · ' + counts.medium + ' medium · ' + counts.hard + ' hard</p></div>' +
+    (customQuestions.length ? '<div class="custom-list">' + customQuestions.slice().reverse().map(q => '<div class="custom-item"><a class="custom-item-main" href="#q-' + esc(q.id) + '"><strong>' + esc(q.title) + '</strong><small>' + esc(q.topic) + ' · ' + esc(q.level) + ' · ' + (S.done[q.id] ? 'Completed' : 'Not solved') + '</small></a><button type="button" class="mini" data-act="delete-custom" data-id="' + esc(q.id) + '" aria-label="Delete ' + esc(q.title) + '">Delete</button></div>').join('') + '</div>' : '<div class="empty">No custom questions yet. Generate your first set above.</div>') +
+    '</section>';
+}
+let generatingCustom = false;
+function parseJsonValue(value, label) {
+  if (typeof value === "string") {
+    try { return JSON.parse(value); } catch (e) { throw new Error(label + " must be valid JSON."); }
+  }
+  if (value === undefined) throw new Error(label + " is missing.");
+  return value;
+}
+async function generateCustomQuestions() {
+  if (!activeUsername) { toast('Create or switch to a username on your Profile page first'); location.hash = '#profile'; return; }
+  const topic = ($('#custom-topic')?.value || '').trim();
+  const level = $('#custom-level')?.value || 'medium';
+  const count = Number($('#custom-count')?.value || 10);
+  if (topic.length < 2) { toast('Enter a topic with at least 2 characters'); $('#custom-topic')?.focus(); return; }
+  if (topic.length > 120) { toast('Topic must be 120 characters or fewer'); return; }
+  if (!['easy','medium','hard'].includes(level) || ![5,10,15,20].includes(count)) { toast('Choose a valid difficulty and question count'); return; }
+  generatingCustom = true;
+  const button = $('[data-act="generate-custom"]');
+  if (button) { button.disabled = true; button.textContent = 'Generating…'; }
+  try {
+    const response = await fetch('/.netlify/functions/generate-questions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, level, count })
+    });
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    if (!response.ok) throw new Error(data.error || ('Question generation failed (' + response.status + ').'));
+    if (!Array.isArray(data.questions) || data.questions.length < 1) throw new Error('The generator returned no questions. Please try again.');
+    const topicName = topic.slice(0, 48);
+    const generated = data.questions.slice(0, count).map((q, i) => {
+      if (!q || typeof q.title !== 'string' || typeof q.statement !== 'string' || typeof q.solution !== 'string') throw new Error('A generated question was incomplete. Please try again.');
+      const input = parseJsonValue(q.inputPayload, 'Input payload');
+      const output = parseJsonValue(q.expectedOutput, 'Expected output');
+      const hints = Array.isArray(q.hints) ? q.hints.filter(x => typeof x === 'string' && x.trim()).slice(0, 4) : [];
+      if (!hints.length) hints.push('Identify the input structure and the transformation required before writing the DataWeave expression.');
+      const id = 'custom-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8) + '-' + i;
+      return {
+        id, title: q.title.slice(0, 100), topic: topicName, level,
+        desc: q.statement, ins: [['payload', J, JSON.stringify(input, null, 2)]],
+        out: [J, JSON.stringify(output, null, 2)], hints,
+        sol: q.solution, why: typeof q.explanation === 'string' ? q.explanation : 'Review how the transformation maps the input payload to the expected output.',
+        useCase: typeof q.realWorldUseCase === 'string' ? q.realWorldUseCase : '', custom: true
+      };
+    });
+    customQuestions = customQuestions.concat(generated);
+    saveCustomQuestions();
+    loadCustomQuestions();
+    generatingCustom = false;
+    renderCustomPractice();
+    paintStats();
+    toast(generated.length + ' custom questions added to your profile');
+  } catch (e) {
+    generatingCustom = false;
+    renderCustomPractice();
+    const message = String(e && e.message || e);
+    if (message.includes('Failed to fetch')) toast('Could not reach the AI service. Deploy the Netlify function and add your API key.');
+    else toast(message.slice(0, 180));
+  }
+}
+function deleteCustomQuestion(id) {
+  const q = customQuestions.find(x => x.id === id);
+  if (!q) return;
+  if (!confirm('Delete this custom question and its saved progress?')) return;
+  customQuestions = customQuestions.filter(x => x.id !== id);
+  saveCustomQuestions();
+  delete S.done[id]; delete S.peek[id]; delete S.hint[id];
+  try { localStorage.removeItem(scopedKey('weaverank:draft:' + id)); localStorage.removeItem(scopedKey('weaverank:out:' + id)); } catch (e) {}
+  loadCustomQuestions(); persist();
+  renderCustomPractice(); paintStats();
+  toast('Custom question deleted');
+}
+
+function renderBadges() {
+  const b = badgeData();
+  app.innerHTML =
+    '<div class="section-h"><h2>Topic badges</h2><p>Bronze for a first solve, silver for most of a topic, gold when you have solved all of it.</p></div>' +
+    '<div class="bgrid">' + b.topics.map(t => '<div class="bcard' + (t.stars ? "" : " locked") + '">' + hex(t.ico, t.stars, t.name + " badge", t.stars) + "<h3>" + esc(t.name) + '</h3><span class="prog">' + t.solved + "/" + t.total + " solved</span></div>").join("") + "</div>" +
+    '<div class="section-h"><h2>Milestones</h2><p>' + b.ach.filter(a => a.earned).length + " of " + b.ach.length + " earned</p></div>" +
+    '<div class="bgrid">' + b.ach.map(a => '<div class="bcard' + (a.earned ? "" : " locked") + '">' + hex(a.ico, a.earned ? 3 : 0, a.name, null) + "<h3>" + esc(a.name) + "</h3><p>" + esc(a.desc) + '</p><span class="prog">' + a.prog + "</span></div>").join("") + "</div>";
+}
+
+/* ---------- actions ---------- */
+async function copyFrom(id) {
+  const el = document.getElementById(id);
+  if (!el) { toast("Nothing to copy"); return; }
+  const text = el.innerText || el.textContent || "";
+  if (!text) { toast("Nothing to copy"); return; }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      toast("Copied to clipboard");
+      return;
+    }
+  } catch (e) { /* Use fallback below. */ }
+
+  let helper;
+  try {
+    helper = document.createElement("textarea");
+    helper.value = text;
+    helper.setAttribute("readonly", "");
+    helper.style.position = "fixed";
+    helper.style.left = "-9999px";
+    helper.style.top = "0";
+    helper.style.opacity = "0";
+    document.body.appendChild(helper);
+    helper.focus();
+    helper.select();
+    helper.setSelectionRange(0, helper.value.length);
+    const ok = document.execCommand && document.execCommand("copy");
+    helper.remove();
+    if (ok) {
+      toast("Copied to clipboard");
+      return;
+    }
+  } catch (e) {
+    if (helper && helper.parentNode) helper.parentNode.removeChild(helper);
+  }
+
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    toast("Text selected — use Copy from your device menu");
+  } catch (e) {
+    toast("Could not copy automatically. Select the text and choose Copy.");
+  }
+}
+function afterProgress(before) {
+  paintStats(); paintStatus(); paintDyn();
+  const after = earnedMap(), fresh = [];
+  after.forEach((label, k) => { if (!before.has(k)) fresh.push(label); });
+  return fresh;
+}
+document.addEventListener("click", ev => {
+  const b = ev.target.closest("[data-act]");
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === "f-lvl" || act === "f-st") { F[act.slice(2)] = b.dataset.v; saveF(); renderList(); return; }
+  if (act === "copy") { copyFrom(b.dataset.t); return; }
+  if (act === "switch-profile") { switchProfile(); return; }
+  if (act === "generate-custom") { generateCustomQuestions(); return; }
+  if (act === "delete-custom") { deleteCustomQuestion(b.dataset.id); return; }
+  if (!cur) return;
+  const id = cur.id;
+  if (act === "hint") {
+    S.hint[id] = Math.min(cur.hints.length, (S.hint[id] || 0) + 1); persist(); paintDyn();
+  } else if (act === "reveal") {
+    if (showAns) { showAns = false; confirmPeek = false; }
+    else if (S.peek[id] || S.done[id]) { showAns = true; }
+    else { confirmPeek = true; }
+    paintDyn();
+  } else if (act === "reveal-yes") {
+    S.peek[id] = 1; persist(); confirmPeek = false; showAns = true; paintDyn();
+  } else if (act === "reveal-no") {
+    confirmPeek = false; paintDyn();
+  } else if (act === "solve") {
+    const before = earnedMap();
+    S.done[id] = { t: Date.now(), peek: !!S.peek[id] };
+    persist();
+    const gained = qPts(cur), fresh = afterProgress(before);
+    toast("+" + gained + " pts" + (fresh.length ? ". Badge earned: " + fresh[0] + (fresh.length > 1 ? " (+" + (fresh.length - 1) + " more)" : "") : ""));
+  } else if (act === "unsolve") {
+    const before = earnedMap();
+    delete S.done[id];
+    persist(); afterProgress(before);
+    toast("Marked incomplete");
+  } else if (act === "paste") {
+    pasteOutput();
+  } else if (act === "check") {
+    checkOutput();
+  } else if (act === "reset") {
+    $("#editor").value = starterFor(cur);
+    try { localStorage.removeItem(scopedKey("weaverank:draft:" + id)); } catch (e) { /* ignore */ }
+    toast("Editor reset to the starter code");
+  }
+});
+app.addEventListener("input", ev => {
+  const t = ev.target;
+  if (t.id === "f-q") { F.q = t.value; $("#results").innerHTML = resultsHTML(); }
+  else if (t.id === "editor" && cur) lsSet("weaverank:draft:" + cur.id, t.value);
+  else if (t.id === "outbox" && cur) lsSet("weaverank:out:" + cur.id, t.value);
+});
+app.addEventListener("change", ev => {
+  if (ev.target.id === "f-topic") { F.topic = ev.target.value; saveF(); $("#results").innerHTML = resultsHTML(); }
+});
+let tabEsc = false;
+app.addEventListener("keydown", ev => {
+  if (ev.target.id !== "editor") return;
+  if (ev.key === "Escape") { tabEsc = true; return; }
+  if (ev.key === "Tab" && !ev.shiftKey && !tabEsc) {
+    ev.preventDefault();
+    const t = ev.target, s = t.selectionStart, e = t.selectionEnd;
+    t.value = t.value.slice(0, s) + "  " + t.value.slice(e);
+    t.selectionStart = t.selectionEnd = s + 2;
+    t.dispatchEvent(new Event("input", { bubbles: true }));
+  } else if (ev.key !== "Shift") tabEsc = false;
+});
+window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+
+// Export/import keeps progress, hints, editor drafts, pasted outputs and filters together.
+function exportBackup() {
+  const data = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(userPrefix())) data[k.slice(userPrefix().length)] = localStorage.getItem(k);
+    }
+  } catch (e) { toast("Could not read browser storage"); return; }
+  const payload = { app: "WeaveRank", version: 1, exportedAt: new Date().toISOString(), data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "weaverank-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast("Backup downloaded");
+}
+function importBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(String(reader.result || ""));
+      if (!obj || obj.app !== "WeaveRank" || !obj.data || typeof obj.data !== "object") throw new Error("Invalid backup");
+      for (const [k, v] of Object.entries(obj.data)) {
+        if (typeof k === "string" && typeof v === "string") localStorage.setItem(userPrefix() + k.replace(/^weaverank:/, ""), v);
+      }
+      toast("Backup restored — reloading your workspace");
+      setTimeout(() => location.reload(), 500);
+    } catch (e) { toast("That backup file is invalid or cannot be read"); }
+  };
+  reader.readAsText(file);
+}
+document.getElementById("backup-export").addEventListener("click", exportBackup);
+document.getElementById("backup-import").addEventListener("click", () => document.getElementById("backup-file").click());
+document.getElementById("backup-file").addEventListener("change", ev => { importBackup(ev.target.files && ev.target.files[0]); ev.target.value = ""; });
+window.addEventListener("pagehide", () => { lsSet(LS_KEY, JSON.stringify(S)); });
+render();
+// Username-based local profiles keep each learner’s progress isolated.
+</script>
